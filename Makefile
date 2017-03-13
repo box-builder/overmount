@@ -12,7 +12,7 @@ install_box:
 
 test: install_box
 	box -t erikh/overmount build.rb	
-	docker run -it --rm erikh/overmount
+	docker run -it -v /tmp --privileged --rm erikh/overmount
 
 docker-test:
 	go list ./... | grep -v vendor | xargs go test -v -check.v 
