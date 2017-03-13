@@ -16,6 +16,9 @@ var (
 
 	// ErrMountCannotProceed returns an underlying error when the mount cannot be processed.
 	ErrMountCannotProceed = errors.New("mount cannot proceed")
+
+	// ErrImageCannotBeComposed is returned when an image (a set of layers) fails validation.
+	ErrImageCannotBeComposed = errors.New("image cannot be composed")
 )
 
 const (
@@ -49,3 +52,6 @@ type Layer struct {
 
 	mount *Mount
 }
+
+// Image is the representation of a set of sequential layers to be mounted.
+type Image []*Layer
