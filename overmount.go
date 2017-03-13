@@ -2,7 +2,6 @@ package overmount
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,8 +9,6 @@ import (
 
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
-
-	digest "github.com/opencontainers/go-digest"
 )
 
 var (
@@ -60,36 +57,6 @@ type Layer struct {
 	mount *Mount
 }
 
-// AssetReader is the reader representation of an on-disk asset
-type AssetReader interface {
-	Digest() digest.Digest
-	io.ReadCloser
-}
-
-// AssetFS is a filesystem-backed asset
-type AssetFS string
-
-// AssetTar is a tar-backed asset
-type AssetTar io.ReadCloser
-
-// AssetNil performs no operations and is used for testing.
-type AssetNil struct{}
-
-// Read reads nothing from the nil reader
-func (a AssetNil) Read(buf []byte) (int, error) {
-	return 0, nil
-}
-
-// Close closes nothing for the nil reader
-func (a AssetNil) Close() error {
-	return nil
-}
-
-// Digest returns a nil digest
-func (a AssetNil) Digest() digest.Digest {
-	return digest.FromBytes(nil)
-}
-
 // NewRepository constructs a *Repository and creates the dir in which the
 // repository lives. A repository is used to hold images and mounts.
 func NewRepository(baseDir string) (*Repository, error) {
@@ -127,7 +94,7 @@ func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
 		Upper:  upper,
 		Lower:  lower,
 		work:   workDir,
-	}, err
+	}, nil
 }
 
 func (m *Mount) makeMountOptions() string {
