@@ -8,7 +8,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Mount the layer against any parent layers.
+// Mount the layer against any parent layers. To unmount, call `Close()` on the
+// returned mount.
 func (l *Layer) Mount() (*Mount, error) {
 	var lower string
 
