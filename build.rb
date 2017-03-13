@@ -5,7 +5,17 @@ remotepath = "/go/src/github.com/erikh/overmount"
 copy ".", remotepath
 
 inside remotepath do
-  run "go get -t -v ./..."
+  run <<-EOF
+  if [ ! -d vendor ]
+  then
+    set -e
+    go get github.com/LK4D4/vndr
+    vndr 
+  fi
+  EOF
 end
 
-set_exec entrypoint: [], cmd: ["/bin/sh", "-c", "cd #{remotepath} && go test -v ./... -check.v"]
+workdir remotepath
+
+set_exec entrypoint: [], 
+         cmd: %w[make docker-test]
