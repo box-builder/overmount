@@ -49,4 +49,8 @@ func (m *mountSuite) TestRepositoryTempDir(c *C) {
 }
 
 func (m *mountSuite) TestMount(c *C) {
+	l := m.Repository.NewLayer("one", nil, AssetNil(struct{}{}))
+	mount, err := l.Mount()
+	c.Assert(err, IsNil)
+	c.Assert(mount.Mounted(), Equals, true)
 }

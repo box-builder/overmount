@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
@@ -44,8 +45,9 @@ type Mount struct {
 	Upper  string
 	Lower  string
 
-	work  string
-	layer *Layer
+	work    string
+	layer   *Layer
+	mounted bool
 }
 
 // Layer is the representation of a filesystem layer.
@@ -69,6 +71,24 @@ type AssetFS string
 
 // AssetTar is a tar-backed asset
 type AssetTar io.ReadCloser
+
+// AssetNil performs no operations and is used for testing.
+type AssetNil struct{}
+
+// Read reads nothing from the nil reader
+func (a AssetNil) Read(buf []byte) (int, error) {
+	return 0, nil
+}
+
+// Close closes nothing for the nil reader
+func (a AssetNil) Close() error {
+	return nil
+}
+
+// Digest returns a nil digest
+func (a AssetNil) Digest() digest.Digest {
+	return digest.FromBytes(nil)
+}
 
 // NewRepository constructs a *Repository and creates the dir in which the
 // repository lives. A repository is used to hold images and mounts.
@@ -97,15 +117,6 @@ func (r *Repository) LayerPath(id string) string {
 
 // NewMount creates a new mount for use.
 func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
-	fi, err := os.Stat(lower)
-	if err != nil {
-		return nil, errors.Wrap(ErrMountCannotProceed, err.Error())
-	}
-
-	if !fi.IsDir() {
-		return nil, ErrMountCannotProceed
-	}
-
 	workDir, err := r.TempDir()
 	if err != nil {
 		return nil, errors.Wrap(ErrMountCannotProceed, err.Error())
@@ -119,14 +130,23 @@ func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
 	}, err
 }
 
+func (m *Mount) makeMountOptions() string {
+	return fmt.Sprintf("upperdir=%s,lowerdir=%s,workdir=%s", m.Upper, m.Lower, m.work)
+}
+
 // Open a mount
 func (m *Mount) Open() error {
-	return unix.Mount("overlay", m.Target, "overlay", 0, fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", m.Lower, m.Upper, m.work))
+	if err := unix.Mount("overlay", m.Target, "overlay", 0, m.makeMountOptions()); err != nil {
+		return err
+	}
+
+	m.mounted = true
+	return nil
 }
 
 // Close a mount
 func (m *Mount) Close() error {
-	if err := unix.Unmount(m.Upper, 0); err != nil {
+	if err := unix.Unmount(m.Target, 0); err != nil {
 		return err
 	}
 
@@ -134,12 +154,13 @@ func (m *Mount) Close() error {
 		return err
 	}
 
+	m.mounted = false
 	return nil
 }
 
 // Mounted returns true if the volume is currently mounted
 func (m *Mount) Mounted() bool {
-	return false
+	return m.mounted
 }
 
 // NewLayer prepares a new layer for work.
@@ -158,13 +179,35 @@ func (l *Layer) Mount() (*Mount, error) {
 		return nil, ErrParentNotMounted
 	}
 
-	lower := l.Repository.MountPath(l.Parent.ID)
+	var lower string
+
+	if l.Parent != nil {
+		lower = l.Repository.MountPath(l.Parent.ID)
+	} else {
+		lower = l.Repository.LayerPath(l.ID)
+	}
+
 	upper := l.Repository.LayerPath(l.ID)
 	target := l.Repository.MountPath(l.ID)
 
+	for _, path := range []string{lower, upper, target} {
+		t, err := filepath.Rel(l.Repository.BaseDir, path)
+		if err != nil {
+			return nil, err
+		}
+
+		if strings.HasPrefix(t, "../") {
+			return nil, errors.Wrap(ErrMountCannotProceed, "path fell below repository root")
+		}
+
+		if err := os.MkdirAll(path, 0700); err != nil {
+			return nil, errors.Wrap(ErrMountCannotProceed, err.Error())
+		}
+	}
+
 	mount, err := l.Repository.NewMount(target, lower, upper)
 	if err != nil {
-		return nil, errors.Wrap(ErrMountFailed, err.Error())
+		return nil, errors.Wrap(ErrMountCannotProceed, err.Error())
 	}
 
 	if err := mount.Open(); err != nil {
