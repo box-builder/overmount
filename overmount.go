@@ -182,7 +182,7 @@ func (l *Layer) Mount() (*Mount, error) {
 	var lower string
 
 	if l.Parent != nil {
-		lower = l.Repository.MountPath(l.Parent.ID)
+		lower = l.Repository.LayerPath(l.Parent.ID)
 	} else {
 		lower = l.Repository.LayerPath(l.ID)
 	}

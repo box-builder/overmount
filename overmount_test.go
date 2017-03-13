@@ -2,6 +2,7 @@ package overmount
 
 import (
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -62,7 +63,7 @@ func (m *mountSuite) TestBasicLayerMount(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(mount2.Mounted(), Equals, true)
 	c.Assert(l2.Mounted(), Equals, true)
-	c.Assert(mount2.Lower, Equals, mount.Target)
+	c.Assert(mount2.Lower, Equals, mount.Upper)
 	c.Assert(mount2.Lower, Not(Equals), mount2.Upper)
 	c.Assert(mount2.Target, Not(Equals), mount.Target)
 	c.Assert(mount2.Target, Not(Equals), mount2.Upper)
@@ -75,4 +76,11 @@ func (m *mountSuite) TestBasicLayerMount(c *C) {
 	c.Assert(err, NotNil)
 	_, err = os.Stat(path.Join(mount.Upper, "test"))
 	c.Assert(err, NotNil)
+
+	layers := []*Layer{l, l2}
+
+	for _, idx := range rand.Perm(2) {
+		// ensure layers can be unmounted in any order
+		c.Assert(layers[idx].Unmount(), IsNil)
+	}
 }
