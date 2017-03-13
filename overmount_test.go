@@ -63,7 +63,7 @@ func (m *mountSuite) TestBasicLayerMount(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(mount2.Mounted(), Equals, true)
 	c.Assert(l2.Mounted(), Equals, true)
-	c.Assert(mount2.Lower, Equals, mount.Upper)
+	c.Assert(mount2.Lower, Equals, mount.Target)
 	c.Assert(mount2.Lower, Not(Equals), mount2.Upper)
 	c.Assert(mount2.Target, Not(Equals), mount.Target)
 	c.Assert(mount2.Target, Not(Equals), mount2.Upper)
