@@ -24,5 +24,7 @@ func (i *Image) Unmount() error {
 		i.mounts = i.mounts[:x]
 	}
 
+	i.mounts = []*Mount{} // clear the last one
+
 	return nil
 }
