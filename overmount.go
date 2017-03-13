@@ -78,7 +78,11 @@ func NewRepository(baseDir string) (*Repository, error) {
 
 // TempDir returns a temporary path within the repository
 func (r *Repository) TempDir() (string, error) {
-	return ioutil.TempDir(filepath.Join(r.BaseDir, tmpdirBase), "")
+	basePath := filepath.Join(r.BaseDir, tmpdirBase)
+	if err := os.MkdirAll(basePath, 0700); err != nil {
+		return "", err
+	}
+	return ioutil.TempDir(basePath, "")
 }
 
 // MountPath gets the mount path for a given subpath, usually the layer id.
