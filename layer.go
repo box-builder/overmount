@@ -10,10 +10,6 @@ import (
 
 // Mount the layer against any parent layers.
 func (l *Layer) Mount() (*Mount, error) {
-	if l.Parent != nil && !l.Parent.Mounted() {
-		return nil, ErrParentNotMounted
-	}
-
 	var lower string
 
 	if l.Parent != nil {
@@ -49,27 +45,5 @@ func (l *Layer) Mount() (*Mount, error) {
 		return nil, errors.Wrap(ErrMountFailed, err.Error())
 	}
 
-	l.setMount(mount)
-
 	return mount, nil
-}
-
-// Unmount unmounts the layer and removes the mount reference.
-func (l *Layer) Unmount() error {
-	if err := l.mount.Close(); err != nil {
-		return errors.Wrap(ErrMountFailed, err.Error())
-	}
-
-	return nil
-}
-
-// Mounted tells us if a layer is currently mounted.
-func (l *Layer) Mounted() bool {
-	return l.mount != nil && l.mount.Mounted()
-}
-
-// setMount appropriately propagates the mount between the layer and mount structs.
-func (l *Layer) setMount(m *Mount) {
-	l.mount = m
-	m.layer = l
 }

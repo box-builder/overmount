@@ -57,3 +57,8 @@ func (r *Repository) NewLayer(id string, parent *Layer, asset AssetReader) *Laye
 		Repository: r,
 	}
 }
+
+// NewImage preps a set of layers to be a part of an image.
+func (r *Repository) NewImage(layers []*Layer) *Image {
+	return &Image{layers: layers, mounts: []*Mount{}}
+}

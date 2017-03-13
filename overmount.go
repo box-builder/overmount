@@ -49,9 +49,10 @@ type Layer struct {
 	Parent     *Layer
 	Asset      AssetReader
 	Repository *Repository
-
-	mount *Mount
 }
 
 // Image is the representation of a set of sequential layers to be mounted.
-type Image []*Layer
+type Image struct {
+	layers []*Layer
+	mounts []*Mount
+}
