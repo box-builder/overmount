@@ -1,37 +1,66 @@
 package overmount
 
 import (
+	"errors"
 	"io"
+	"os"
 
+	"github.com/docker/docker/pkg/archive"
+	"github.com/docker/docker/pkg/chrootarchive"
 	digest "github.com/opencontainers/go-digest"
 )
 
-// AssetReader is the reader representation of an on-disk asset
-type AssetReader interface {
-	Digest() digest.Digest
-	io.ReadCloser
+// Asset is the reader representation of an on-disk asset
+type Asset struct {
+	path   string
+	digest digest.Digest
 }
 
-// AssetFS is a filesystem-backed asset
-type AssetFS string
+// NewAsset constructs a new *Asset that operates on path `path`.
+func NewAsset(path string, digest digest.Digest) (*Asset, error) {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
 
-// AssetTar is a tar-backed asset
-type AssetTar io.ReadCloser
+	if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+		// here we attempt to remove a whole class of potential bugs.
+		return nil, errors.New("cannot operate on a symlink")
+	}
 
-// AssetNil performs no operations and is used for testing.
-type AssetNil struct{}
+	a := &Asset{
+		path:   path,
+		digest: digest,
+	}
 
-// Read reads nothing from the nil reader
-func (a AssetNil) Read(buf []byte) (int, error) {
-	return 0, nil
+	return a, nil
 }
 
-// Close closes nothing for the nil reader
-func (a AssetNil) Close() error {
+// Path gets the filesystem path we will be working with.
+func (a *Asset) Path() string {
+	return a.path
+}
+
+// Read from the *tar.Reader and unpack on to the filesystem.
+func (a *Asset) Read(reader io.Reader) error {
+	_, err := chrootarchive.ApplyLayer(a.path, io.TeeReader(reader, a.digest))
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// Digest returns a nil digest
-func (a AssetNil) Digest() digest.Digest {
-	return digest.FromBytes(nil)
+// Write a tarball from the filesystem.
+func (a *Asset) Write(writer io.Writer) error {
+	reader, err := archive.Tar(a.path, archive.Uncompressed)
+	if err != nil {
+		return err
+	}
+
+	if _, err := io.Copy(writer, io.TeeReader(reader, a.digest)); err != nil {
+		return err
+	}
+
+	return nil
 }

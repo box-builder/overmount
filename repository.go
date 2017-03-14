@@ -49,7 +49,7 @@ func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
 }
 
 // NewLayer prepares a new layer for work.
-func (r *Repository) NewLayer(id string, parent *Layer, asset AssetReader) *Layer {
+func (r *Repository) NewLayer(id string, parent *Layer, asset *Asset) *Layer {
 	return &Layer{
 		ID:         id,
 		Parent:     parent,

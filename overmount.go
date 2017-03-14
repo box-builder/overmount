@@ -47,7 +47,7 @@ type Mount struct {
 type Layer struct {
 	ID         string
 	Parent     *Layer
-	Asset      AssetReader
+	Asset      *Asset
 	Repository *Repository
 }
 
