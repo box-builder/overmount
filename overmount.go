@@ -19,6 +19,9 @@ var (
 
 	// ErrImageCannotBeComposed is returned when an image (a set of layers) fails validation.
 	ErrImageCannotBeComposed = errors.New("image cannot be composed")
+
+	// ErrInvalidAsset is returned when the asset cannot be used.
+	ErrInvalidAsset = errors.New("invalid asset")
 )
 
 const (

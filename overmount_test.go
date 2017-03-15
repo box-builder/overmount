@@ -1,6 +1,7 @@
 package overmount
 
 import (
+	"archive/tar"
 	"io/ioutil"
 	"os"
 	"path"
@@ -52,12 +53,14 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 		for x, name := range layerNames[:i+1] {
 			// stack the layers as parents of each other, except for the first of
 			// course.
-			var layer *Layer
+			var parent *Layer
 			if x > 0 {
-				layer = layers[x-1]
+				parent = layers[x-1]
 			}
 
-			layers = append(layers, m.Repository.NewLayer(name, layer))
+			child, err := m.Repository.NewLayer(name, parent)
+			c.Assert(err, IsNil)
+			layers = append(layers, child)
 		}
 
 		image := m.Repository.NewImage(layers[len(layers)-1])
@@ -74,10 +77,32 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 			target = image.layer.Path()
 		}
 
-		f, err := os.Create(path.Join(target, image.layer.ID))
+		r, w, err := os.Pipe()
 		c.Assert(err, IsNil)
-		c.Assert(f.Close(), IsNil)
+		errChan := make(chan error, 1)
 
+		go func(target string) {
+			tw := tar.NewWriter(w)
+			defer w.Close()
+			defer tw.Close()
+			defer close(errChan)
+
+			err = tw.WriteHeader(&tar.Header{
+				Name:     image.layer.ID,
+				Mode:     0600,
+				Typeflag: tar.TypeReg,
+			})
+			if err != nil {
+				errChan <- err
+				return
+			}
+			if _, err := tw.Write([]byte{}); err != nil {
+				errChan <- err
+				return
+			}
+		}(target)
+
+		c.Assert(image.layer.Asset.Read(r), IsNil)
 		fis, err := ioutil.ReadDir(target)
 		c.Assert(err, IsNil)
 

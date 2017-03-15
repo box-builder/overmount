@@ -39,31 +39,6 @@ func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
 	}, nil
 }
 
-// NewLayer prepares a new layer for work.
-func (r *Repository) NewLayer(id string, parent *Layer) *Layer {
-	return &Layer{
-		ID:     id,
-		Parent: parent,
-		//Asset:      asset,
-		Repository: r,
-	}
-}
-
-// MountPath gets the mount path for a given subpath, usually the layer id.
-func (l *Layer) MountPath() string {
-	return filepath.Join(l.Repository.BaseDir, mountBase, l.ID)
-}
-
-// Path gets the layer store path for a given subpath, usually the layer id.
-func (l *Layer) Path() string {
-	return filepath.Join(l.Repository.BaseDir, layerBase, l.ID)
-}
-
-// NewImage preps a set of layers to be a part of an image.
-func (r *Repository) NewImage(topLayer *Layer) *Image {
-	return &Image{repository: r, layer: topLayer}
-}
-
 func (r *Repository) mkdirCheckRel(path string) error {
 	rel, err := filepath.Rel(r.BaseDir, path)
 	if err != nil {
@@ -75,46 +50,4 @@ func (r *Repository) mkdirCheckRel(path string) error {
 	}
 
 	return os.MkdirAll(path, 0700)
-}
-
-// Mount mounts an image with the specified layer as its highest element.
-func (i *Image) Mount() error {
-	upper := i.layer.Path()
-	target := i.layer.MountPath()
-
-	layer := i.layer.Parent
-
-	lower := ""
-
-	for layer != nil {
-		if err := i.repository.mkdirCheckRel(layer.Path()); err != nil {
-			return err
-		}
-		if lower != "" {
-			lower = layer.Path() + ":" + lower
-		} else {
-			lower = layer.Path()
-		}
-		layer = layer.Parent
-	}
-
-	for _, path := range []string{target, upper} {
-		if err := i.repository.mkdirCheckRel(path); err != nil {
-			return errors.Wrap(ErrMountCannotProceed, err.Error())
-		}
-	}
-
-	mount, err := i.repository.NewMount(target, lower, upper)
-	if err != nil {
-		return err
-	}
-
-	i.mount = mount
-
-	return mount.Open()
-}
-
-// Unmount unmounts the image.
-func (i *Image) Unmount() error {
-	return i.mount.Close()
 }
