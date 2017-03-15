@@ -2,7 +2,6 @@ package overmount
 
 import (
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -34,10 +33,6 @@ func (m *mountSuite) SetUpTest(c *C) {
 	m.Repository = repo
 }
 
-func (m *mountSuite) TearDownTest(c *C) {
-	os.RemoveAll(m.Repository.BaseDir)
-}
-
 func (m *mountSuite) TestRepositoryTempDir(c *C) {
 	t, err := m.Repository.TempDir()
 	c.Assert(err, IsNil)
@@ -49,36 +44,47 @@ func (m *mountSuite) TestRepositoryTempDir(c *C) {
 	c.Assert(first, Equals, tmpdirBase+"/")
 }
 
-func (m *mountSuite) TestBasicLayerMount(c *C) {
-	l := m.Repository.NewLayer("one", nil)
-	mount, err := l.Mount()
-	c.Assert(err, IsNil)
-	c.Assert(mount.Lower, Equals, mount.Upper)
-	c.Assert(mount.Mounted(), Equals, true)
-	c.Assert(l.ID, Equals, "one")
-	l2 := m.Repository.NewLayer("two", l)
-	c.Assert(l2.Parent, DeepEquals, l)
-	mount2, err := l2.Mount()
-	c.Assert(err, IsNil)
-	c.Assert(mount2.Mounted(), Equals, true)
-	c.Assert(mount2.Lower, Equals, mount.Target)
-	c.Assert(mount2.Lower, Not(Equals), mount2.Upper)
-	c.Assert(mount2.Target, Not(Equals), mount.Target)
-	c.Assert(mount2.Target, Not(Equals), mount2.Upper)
-	c.Assert(ioutil.WriteFile(path.Join(mount2.Target, "test"), nil, 0644), IsNil)
-	_, err = os.Stat(path.Join(mount2.Upper, "test"))
-	c.Assert(err, IsNil)
-	_, err = os.Stat(path.Join(mount2.Lower, "test"))
-	c.Assert(err, NotNil)
-	_, err = os.Stat(path.Join(mount.Target, "test"))
-	c.Assert(err, NotNil)
-	_, err = os.Stat(path.Join(mount.Upper, "test"))
-	c.Assert(err, NotNil)
+func (m *mountSuite) TestBasicImageMount(c *C) {
+	layerNames := []string{"one", "two", "three"}
 
-	mounts := []*Mount{mount, mount2}
+	for i := 0; i < len(layerNames); i++ { // offset from 1
+		layers := []*Layer{}
+		for x, name := range layerNames[:i+1] {
+			// stack the layers as parents of each other, except for the first of
+			// course.
+			var layer *Layer
+			if x > 0 {
+				layer = layers[x-1]
+			}
 
-	for _, idx := range rand.Perm(2) {
-		// ensure layers can be unmounted in any order
-		c.Assert(mounts[idx].Close(), IsNil)
+			layers = append(layers, m.Repository.NewLayer(name, layer))
+		}
+
+		image := m.Repository.NewImage(layers[len(layers)-1])
+		if len(layers) == 1 {
+			c.Assert(image.Mount(), NotNil)
+			m.Repository.mkdirCheckRel(image.layer.Path())
+		} else {
+			c.Assert(image.Mount(), IsNil)
+			c.Assert(image.mount.Mounted(), Equals, true)
+		}
+
+		target := image.layer.MountPath()
+		if len(layers) == 1 {
+			target = image.layer.Path()
+		}
+
+		f, err := os.Create(path.Join(target, image.layer.ID))
+		c.Assert(err, IsNil)
+		c.Assert(f.Close(), IsNil)
+
+		fis, err := ioutil.ReadDir(target)
+		c.Assert(err, IsNil)
+
+		c.Assert(len(fis), Equals, len(layers)) // one file for each layer, one written to each layer
+
+		if len(layers) > 1 {
+			c.Assert(image.Unmount(), IsNil)
+		}
 	}
 }

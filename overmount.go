@@ -39,7 +39,6 @@ type Mount struct {
 	Lower  string
 
 	work    string
-	layer   *Layer
 	mounted bool
 }
 
@@ -53,6 +52,7 @@ type Layer struct {
 
 // Image is the representation of a set of sequential layers to be mounted.
 type Image struct {
-	layers []*Layer
-	mounts []*Mount
+	repository *Repository
+	layer      *Layer
+	mount      *Mount
 }

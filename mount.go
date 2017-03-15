@@ -4,16 +4,27 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/pkg/errors"
+
 	"golang.org/x/sys/unix"
 )
 
-func (m *Mount) makeMountOptions() string {
-	return fmt.Sprintf("upperdir=%s,lowerdir=%s,workdir=%s", m.Upper, m.Lower, m.work)
+func (m *Mount) makeMountOptions() (string, error) {
+	if m.Lower == "" {
+		return "", errors.Wrap(ErrMountCannotProceed, "No lower dir specified (only one layer?)")
+	}
+
+	return fmt.Sprintf("upperdir=%s,lowerdir=%s,workdir=%s", m.Upper, m.Lower, m.work), nil
 }
 
 // Open a mount
 func (m *Mount) Open() error {
-	if err := unix.Mount("overlay", m.Target, "overlay", 0, m.makeMountOptions()); err != nil {
+	opts, err := m.makeMountOptions()
+	if err != nil {
+		return err
+	}
+
+	if err := unix.Mount("overlay", m.Target, "overlay", 0, opts); err != nil {
 		return err
 	}
 
