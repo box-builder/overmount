@@ -7,7 +7,8 @@ import (
 	digest "github.com/opencontainers/go-digest"
 )
 
-// NewLayer prepares a new layer for work.
+// NewLayer prepares a new layer for work. The ID is the directory that will be
+// created in the repository; see NewRepository for more info.
 func (r *Repository) NewLayer(id string, parent *Layer) (*Layer, error) {
 	var err error
 
@@ -34,17 +35,17 @@ func (l *Layer) UnpackPath() (*Asset, error) {
 	return NewAsset(l.MountPath(), digest.SHA256.Digester())
 }
 
-// MountPath gets the mount path for a given subpath, usually the layer id.
+// MountPath gets the mount path for a given subpath.
 func (l *Layer) MountPath() string {
 	return filepath.Join(l.Repository.BaseDir, mountBase, l.ID)
 }
 
-// Path gets the layer store path for a given subpath, usually the layer id.
+// Path gets the layer store path for a given subpath.
 func (l *Layer) Path() string {
 	return filepath.Join(l.Repository.BaseDir, layerBase, l.ID)
 }
 
-// Unpack unpacks the asset into the layer Path().
+// Unpack unpacks the asset into the layer Path(). It returns the computed digest.
 func (l *Layer) Unpack(reader io.Reader) (digest.Digest, error) {
 	if err := l.Asset.Read(reader); err != nil {
 		return digest.Digest(""), err

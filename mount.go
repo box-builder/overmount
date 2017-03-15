@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+// makeMountOptions makes the lower,upper,work filesystem options.
 func (m *Mount) makeMountOptions() (string, error) {
 	if m.Lower == "" {
 		return "", errors.Wrap(ErrMountCannotProceed, "No lower dir specified (only one layer?)")
@@ -17,7 +18,7 @@ func (m *Mount) makeMountOptions() (string, error) {
 	return fmt.Sprintf("upperdir=%s,lowerdir=%s,workdir=%s", m.Upper, m.Lower, m.work), nil
 }
 
-// Open a mount
+// Open an overlay mount at (*Mount).Target; returns any errors.
 func (m *Mount) Open() error {
 	opts, err := m.makeMountOptions()
 	if err != nil {
@@ -32,7 +33,7 @@ func (m *Mount) Open() error {
 	return nil
 }
 
-// Close a mount
+// Close a mount and remove the work directory. The target directory is left untouched.
 func (m *Mount) Close() error {
 	if err := unix.Unmount(m.Target, 0); err != nil {
 		return err
@@ -46,7 +47,7 @@ func (m *Mount) Close() error {
 	return nil
 }
 
-// Mounted returns true if the volume is currently mounted
+// Mounted returns true if the volume is currently mounted.
 func (m *Mount) Mounted() bool {
 	return m.mounted
 }

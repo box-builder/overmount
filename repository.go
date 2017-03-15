@@ -24,7 +24,10 @@ func (r *Repository) TempDir() (string, error) {
 	return ioutil.TempDir(basePath, "")
 }
 
-// NewMount creates a new mount for use.
+// NewMount creates a new mount for use. Target, lower, and upper correspond to
+// specific fields in the mount stanza; read
+// https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt for more
+// information.
 func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
 	workDir, err := r.TempDir()
 	if err != nil {

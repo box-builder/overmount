@@ -1,3 +1,12 @@
+// Package overmount - mount tars in an overlay filesystem
+//
+// overmount is intended to mount docker images, or work with similar
+// functionality to achieve a series of layered filesystems which can be composed
+// into an image.
+//
+// Example:
+//
+// // EXAMPLE HERE
 package overmount
 
 import (
@@ -30,12 +39,31 @@ const (
 	layerBase  = "layers"
 )
 
-// Repository is a collection of mounts/layers.
+// Repository is a collection of mounts/layers. Repositories have a base path
+// and a collection of layers and mounts. Overlay work directories are stored
+// in `tmp`.
+//
+// In summary:
+//
+//     basedir/
+//        layers/
+//          layer-id/
+//          top-layer/
+//        tmp/
+//          some-random-workdir/
+//        mount/
+//          another-layer-id/
+//          top-layer/
+//
+// Repositories can hold any number of mounts and layers. They do not
+// necessarily need to be related.
 type Repository struct {
 	BaseDir string
 }
 
-// Mount represents a single overlay mount
+// Mount represents a single overlay mount. The lower value is computed from
+// the parent layer of the layer provided to the NewMount call. The target and
+// upper dirs are computed from the passed layer.
 type Mount struct {
 	Target string
 	Upper  string
@@ -45,7 +73,14 @@ type Mount struct {
 	mounted bool
 }
 
-// Layer is the representation of a filesystem layer.
+// Layer is the representation of a filesystem layer. Layers are organized in a
+// reverse linked-list from topmost layer to the root layer. In an
+// (*Image).Mount() scenario, the layers are mounted from the bottom up to
+// culminate in a mount path that represents the top-most layer merged with all
+// the lower layers.
+//
+// See https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt for
+// more information on mount flags.
 type Layer struct {
 	ID         string
 	Parent     *Layer
