@@ -15,7 +15,6 @@ test: install_box
 	docker run -it -v /tmp --privileged --rm erikh/overmount
 
 docker-test:
-	go list ./... | grep -v vendor | xargs go test -v -check.v || :
-	bash
+	go list ./... | grep -v vendor | xargs go test -v -check.v
 
 .PHONY: all test
