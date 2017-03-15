@@ -13,11 +13,11 @@ import (
 // Asset is the reader representation of an on-disk asset
 type Asset struct {
 	path   string
-	digest digest.Digest
+	digest digest.Digester
 }
 
 // NewAsset constructs a new *Asset that operates on path `path`.
-func NewAsset(path string, digest digest.Digest) (*Asset, error) {
+func NewAsset(path string, digest digest.Digester) (*Asset, error) {
 	fi, err := os.Lstat(path)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (a *Asset) Path() string {
 
 // Read from the *tar.Reader and unpack on to the filesystem.
 func (a *Asset) Read(reader io.Reader) error {
-	_, err := chrootarchive.ApplyLayer(a.path, io.TeeReader(reader, a.digest))
+	_, err := chrootarchive.ApplyLayer(a.path, io.TeeReader(reader, a.digest.Hash()))
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (a *Asset) Write(writer io.Writer) error {
 		return err
 	}
 
-	if _, err := io.Copy(writer, io.TeeReader(reader, a.digest)); err != nil {
+	if _, err := io.Copy(writer, io.TeeReader(reader, a.digest.Hash())); err != nil {
 		return err
 	}
 

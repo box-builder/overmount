@@ -50,13 +50,13 @@ func (m *mountSuite) TestRepositoryTempDir(c *C) {
 }
 
 func (m *mountSuite) TestBasicLayerMount(c *C) {
-	l := m.Repository.NewLayer("one", nil, AssetNil(struct{}{}))
+	l := m.Repository.NewLayer("one", nil)
 	mount, err := l.Mount()
 	c.Assert(err, IsNil)
 	c.Assert(mount.Lower, Equals, mount.Upper)
 	c.Assert(mount.Mounted(), Equals, true)
 	c.Assert(l.ID, Equals, "one")
-	l2 := m.Repository.NewLayer("two", l, AssetNil(struct{}{}))
+	l2 := m.Repository.NewLayer("two", l)
 	c.Assert(l2.Parent, DeepEquals, l)
 	mount2, err := l2.Mount()
 	c.Assert(err, IsNil)
