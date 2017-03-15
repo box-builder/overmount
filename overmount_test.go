@@ -47,7 +47,7 @@ func (m *mountSuite) TestRepositoryTempDir(c *C) {
 func (m *mountSuite) TestBasicImageMount(c *C) {
 	layerNames := []string{"one", "two", "three"}
 
-	for i := 0; i < len(layerNames); i++ { // offset from 1
+	for i := 0; i < len(layerNames); i++ {
 		layers := []*Layer{}
 		for x, name := range layerNames[:i+1] {
 			// stack the layers as parents of each other, except for the first of
