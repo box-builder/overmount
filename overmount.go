@@ -4,9 +4,8 @@
 // functionality to achieve a series of layered filesystems which can be composed
 // into an image.
 //
-// Example:
+// See the examples/ directory for examples of how to use the API.
 //
-// // EXAMPLE HERE
 package overmount
 
 import (
