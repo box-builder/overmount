@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -122,8 +121,6 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 }
 
 func (m *mountSuite) TestImageUnpack(c *C) {
-	fmt.Println(m.Repository.BaseDir)
-
 	dockerClient, err := client.NewEnvClient()
 	c.Assert(err, IsNil)
 
@@ -180,7 +177,16 @@ func (m *mountSuite) TestImageUnpack(c *C) {
 		c.Assert(err, IsNil)
 		c.Assert(digest, NotNil)
 	}
-	//
-	// image, err := m.Repository.NewImage(parent)
-	// c.Assert(
+
+	image := m.Repository.NewImage(parent)
+	c.Assert(image.Mount(), IsNil)
+	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/go/bin/go"))
+	c.Assert(err, IsNil)
+	_, err = os.Stat(path.Join(parent.MountPath(), "/go/bin"))
+	c.Assert(err, IsNil)
+	c.Assert(image.Unmount(), IsNil)
+	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/go/bin/go"))
+	c.Assert(err, NotNil)
+	_, err = os.Stat(path.Join(parent.MountPath(), "/go/bin"))
+	c.Assert(err, NotNil)
 }
