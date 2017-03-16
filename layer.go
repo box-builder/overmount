@@ -18,21 +18,12 @@ func (r *Repository) NewLayer(id string, parent *Layer) (*Layer, error) {
 		Repository: r,
 	}
 
-	layer.Asset, err = layer.UnpackPath()
+	layer.Asset, err = NewAsset(layer.Path(), digest.SHA256.Digester())
 	if err != nil {
 		return nil, err
 	}
 
 	return layer, nil
-}
-
-// UnpackPath describes the path that will be unpacked to, or unpacked already.
-func (l *Layer) UnpackPath() (*Asset, error) {
-	if l.Parent == nil {
-		return NewAsset(l.Path(), digest.SHA256.Digester())
-	}
-
-	return NewAsset(l.MountPath(), digest.SHA256.Digester())
 }
 
 // MountPath gets the mount path for a given subpath.

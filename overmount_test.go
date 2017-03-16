@@ -2,11 +2,18 @@ package overmount
 
 import (
 	"archive/tar"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	. "testing"
+
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 
 	. "gopkg.in/check.v1"
 )
@@ -112,4 +119,68 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 			c.Assert(image.Unmount(), IsNil)
 		}
 	}
+}
+
+func (m *mountSuite) TestImageUnpack(c *C) {
+	fmt.Println(m.Repository.BaseDir)
+
+	dockerClient, err := client.NewEnvClient()
+	c.Assert(err, IsNil)
+
+	reader, err := dockerClient.ImagePull(context.Background(), "docker.com/library/golang:latest", types.ImagePullOptions{})
+	c.Assert(err, IsNil)
+	_, err = io.Copy(ioutil.Discard, reader)
+	c.Assert(err, IsNil)
+
+	reader, err = dockerClient.ImageSave(context.Background(), []string{"library/golang:latest"})
+	c.Assert(err, IsNil)
+
+	layerMap := map[string]string{}
+	var manifest []map[string]interface{}
+
+	tr := tar.NewReader(reader)
+
+	tmpdir, err := ioutil.TempDir("", "")
+	c.Assert(err, IsNil)
+
+	for {
+		header, err := tr.Next()
+		if err != nil {
+			break
+		}
+		if path.Base(header.Name) == "layer.tar" {
+			layerID := path.Base(path.Dir(header.Name))
+			f, err := os.Create(path.Join(tmpdir, layerID+".tar"))
+			c.Assert(err, IsNil)
+			_, err = io.Copy(f, tr)
+			c.Assert(err, IsNil)
+			f.Close()
+			layerMap[layerID] = f.Name()
+		} else if path.Base(header.Name) == "manifest.json" {
+			content, err := ioutil.ReadAll(tr)
+			c.Assert(err, IsNil)
+			c.Assert(json.Unmarshal(content, &manifest), IsNil)
+		} else {
+			io.Copy(ioutil.Discard, tr)
+		}
+	}
+	reader.Close()
+
+	var parent *Layer // at the end of the loop, the parent will be the top-most layer
+
+	for _, tmp := range manifest[0]["Layers"].([]interface{}) {
+		layerID := path.Dir(tmp.(string))
+		tarfile, err := os.Open(layerMap[layerID])
+		c.Assert(err, IsNil)
+		layer, err := m.Repository.NewLayer(layerID, parent)
+		c.Assert(os.MkdirAll(layer.Path(), 0700), IsNil)
+		c.Assert(err, IsNil)
+		parent = layer
+		digest, err := layer.Unpack(tarfile)
+		c.Assert(err, IsNil)
+		c.Assert(digest, NotNil)
+	}
+	//
+	// image, err := m.Repository.NewImage(parent)
+	// c.Assert(
 }
