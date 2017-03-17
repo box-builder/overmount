@@ -2,6 +2,7 @@ package overmount
 
 import (
 	"io"
+	"os"
 	"path/filepath"
 
 	digest "github.com/opencontainers/go-digest"
@@ -16,6 +17,10 @@ func (r *Repository) NewLayer(id string, parent *Layer) (*Layer, error) {
 		ID:         id,
 		Parent:     parent,
 		Repository: r,
+	}
+
+	if err := r.AddLayer(layer); err != nil {
+		return nil, err
 	}
 
 	layer.Asset, err = NewAsset(layer.Path(), digest.SHA256.Digester())
@@ -43,4 +48,10 @@ func (l *Layer) Unpack(reader io.Reader) (digest.Digest, error) {
 	}
 
 	return l.Asset.Digest(), nil
+}
+
+// Remove a layer from the filesystem and the repository.
+func (l *Layer) Remove() error {
+	l.Repository.RemoveLayer(l)
+	return os.RemoveAll(l.Path())
 }

@@ -9,6 +9,8 @@
 package overmount
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 )
 
@@ -30,6 +32,12 @@ var (
 
 	// ErrInvalidAsset is returned when the asset cannot be used.
 	ErrInvalidAsset = errors.New("invalid asset")
+
+	// ErrLayerExists is called when a layer id already exists in the repository.
+	ErrLayerExists = errors.New("layer already exists")
+
+	// ErrMountExists is called when a mount already exists in the repository.
+	ErrMountExists = errors.New("mount already exists")
 )
 
 const (
@@ -58,6 +66,10 @@ const (
 // necessarily need to be related.
 type Repository struct {
 	BaseDir string
+	Layers  map[string]*Layer
+	Mounts  []*Mount
+
+	editMutex *sync.Mutex
 }
 
 // Mount represents a single overlay mount. The lower value is computed from

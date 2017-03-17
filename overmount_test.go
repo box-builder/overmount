@@ -117,6 +117,10 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 		if len(layers) > 1 {
 			c.Assert(image.Unmount(), IsNil)
 		}
+
+		for _, layer := range layers {
+			m.Repository.RemoveLayer(layer)
+		}
 	}
 }
 
