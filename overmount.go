@@ -6,6 +6,9 @@
 //
 // See the examples/ directory for examples of how to use the API.
 //
+// github.com/pkg/errors.Wrap is in use with many of our errors; look at the
+// errors.Cause API in that package for more information on how to extract the
+// static error constants.
 package overmount
 
 import (

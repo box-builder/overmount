@@ -53,5 +53,8 @@ func (i *Image) Mount() error {
 
 // Unmount unmounts the image. This does not affect layer storage.
 func (i *Image) Unmount() error {
+	if i.mount == nil {
+		return ErrMountCannotProceed
+	}
 	return i.mount.Close()
 }
