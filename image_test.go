@@ -1,8 +1,9 @@
 package overmount
 
 import (
-	"github.com/pkg/errors"
 	. "gopkg.in/check.v1"
+
+	"github.com/pkg/errors"
 )
 
 func (m *mountSuite) TestImageMountUnmount(c *C) {
