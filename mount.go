@@ -51,3 +51,8 @@ func (m *Mount) Close() error {
 func (m *Mount) Mounted() bool {
 	return m.mounted
 }
+
+// Equals compares two mounts to see if they're equivalent
+func (m *Mount) Equals(m2 *Mount) bool {
+	return m.target == m2.target && m.upper == m2.upper && m.lower == m2.lower && m.work == m2.work
+}

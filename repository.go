@@ -104,7 +104,7 @@ func (r *Repository) AddMount(mount *Mount) error {
 func (r *Repository) RemoveMount(mount *Mount) {
 	r.edit(func() error {
 		for i, x := range r.mounts {
-			if mount.target == x.target && mount.upper == x.upper && mount.lower == x.lower && mount.work == x.work {
+			if mount.Equals(x) {
 				r.mounts = append(r.mounts[:i], r.mounts[i+1:]...)
 			}
 		}
