@@ -65,9 +65,9 @@ const (
 // Repositories can hold any number of mounts and layers. They do not
 // necessarily need to be related.
 type Repository struct {
-	BaseDir string
-	Layers  map[string]*Layer
-	Mounts  []*Mount
+	baseDir string
+	layers  map[string]*Layer
+	mounts  []*Mount
 
 	editMutex *sync.Mutex
 }
@@ -76,12 +76,12 @@ type Repository struct {
 // the parent layer of the layer provided to the NewMount call. The target and
 // upper dirs are computed from the passed layer.
 type Mount struct {
-	Target string
-	Upper  string
-	Lower  string
-
-	work    string
-	mounted bool
+	target     string
+	upper      string
+	lower      string
+	repository *Repository
+	work       string
+	mounted    bool
 }
 
 // Layer is the representation of a filesystem layer. Layers are organized in a
@@ -93,10 +93,10 @@ type Mount struct {
 // See https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt for
 // more information on mount flags.
 type Layer struct {
-	ID         string
-	Parent     *Layer
-	Asset      *Asset
-	Repository *Repository
+	id         string
+	parent     *Layer
+	asset      *Asset
+	repository *Repository
 }
 
 // Image is the representation of a set of sequential layers to be mounted.

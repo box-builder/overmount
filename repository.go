@@ -14,16 +14,16 @@ import (
 // repository lives. A repository is used to hold images and mounts.
 func NewRepository(baseDir string) (*Repository, error) {
 	return &Repository{
-		BaseDir:   baseDir,
-		Layers:    map[string]*Layer{},
-		Mounts:    []*Mount{},
+		baseDir:   baseDir,
+		layers:    map[string]*Layer{},
+		mounts:    []*Mount{},
 		editMutex: new(sync.Mutex),
 	}, os.MkdirAll(baseDir, 0700)
 }
 
 // TempDir returns a temporary path within the repository
 func (r *Repository) TempDir() (string, error) {
-	basePath := filepath.Join(r.BaseDir, tmpdirBase)
+	basePath := filepath.Join(r.baseDir, tmpdirBase)
 	if err := os.MkdirAll(basePath, 0700); err != nil {
 		return "", err
 	}
@@ -41,9 +41,9 @@ func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
 	}
 
 	mount := &Mount{
-		Target: target,
-		Upper:  upper,
-		Lower:  lower,
+		target: target,
+		upper:  upper,
+		lower:  lower,
 		work:   workDir,
 	}
 
@@ -55,7 +55,7 @@ func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
 }
 
 func (r *Repository) mkdirCheckRel(path string) error {
-	rel, err := filepath.Rel(r.BaseDir, path)
+	rel, err := filepath.Rel(r.baseDir, path)
 	if err != nil {
 		return err
 	}
@@ -76,10 +76,10 @@ func (r *Repository) edit(editFunc func() error) error {
 // AddLayer adds a layer to the repository.
 func (r *Repository) AddLayer(layer *Layer) error {
 	return r.edit(func() error {
-		if _, ok := r.Layers[layer.ID]; ok {
+		if _, ok := r.layers[layer.id]; ok {
 			return ErrLayerExists
 		}
-		r.Layers[layer.ID] = layer
+		r.layers[layer.id] = layer
 		return nil
 	})
 }
@@ -87,7 +87,7 @@ func (r *Repository) AddLayer(layer *Layer) error {
 // RemoveLayer removes a layer from the repository
 func (r *Repository) RemoveLayer(layer *Layer) {
 	r.edit(func() error {
-		delete(r.Layers, layer.ID)
+		delete(r.layers, layer.id)
 		return nil
 	})
 }
@@ -95,7 +95,7 @@ func (r *Repository) RemoveLayer(layer *Layer) {
 // AddMount adds a layer to the repository.
 func (r *Repository) AddMount(mount *Mount) error {
 	return r.edit(func() error {
-		r.Mounts = append(r.Mounts, mount)
+		r.mounts = append(r.mounts, mount)
 		return nil
 	})
 }
@@ -103,9 +103,9 @@ func (r *Repository) AddMount(mount *Mount) error {
 // RemoveMount removes a layer from the repository
 func (r *Repository) RemoveMount(mount *Mount) {
 	r.edit(func() error {
-		for i, x := range r.Mounts {
-			if mount.Target == x.Target && mount.Upper == x.Upper && mount.Lower == x.Lower && mount.work == x.work {
-				r.Mounts = append(r.Mounts[:i], r.Mounts[i+1:]...)
+		for i, x := range r.mounts {
+			if mount.target == x.target && mount.upper == x.upper && mount.lower == x.lower && mount.work == x.work {
+				r.mounts = append(r.mounts[:i], r.mounts[i+1:]...)
 			}
 		}
 		return nil
