@@ -24,11 +24,7 @@ func (m *mountSuite) TestBasicRepository(c *C) {
 }
 
 func (m *mountSuite) TestRepositoryPropagation(c *C) {
-	layer, err := m.Repository.NewLayer("quux", nil)
-	c.Assert(err, IsNil)
-	layer2, err := m.Repository.NewLayer("bar", layer)
-	c.Assert(err, IsNil)
-	image := m.Repository.NewImage(layer2)
+	image, layer := m.makeImage(c, 2)
 	c.Assert(image.Mount(), IsNil)
 	c.Assert(len(m.Repository.mounts), Equals, 1)
 	c.Assert(len(m.Repository.layers), Equals, 2)
@@ -36,7 +32,7 @@ func (m *mountSuite) TestRepositoryPropagation(c *C) {
 
 	m.Repository.RemoveLayer(layer)
 	c.Assert(len(m.Repository.layers), Equals, 1)
-	m.Repository.RemoveLayer(layer2)
+	m.Repository.RemoveLayer(layer.parent)
 	c.Assert(len(m.Repository.layers), Equals, 0)
 
 	c.Assert(len(m.Repository.mounts), Equals, 1)
@@ -51,11 +47,13 @@ func (m *mountSuite) TestRepositoryPropagation(c *C) {
 	c.Assert(len(m.Repository.mounts), Equals, 0)
 
 	c.Assert(m.Repository.AddLayer(layer), IsNil)
+	c.Assert(m.Repository.AddLayer(layer), Equals, ErrLayerExists)
 	c.Assert(len(m.Repository.layers), Equals, 1)
-	c.Assert(m.Repository.AddLayer(layer2), IsNil)
+	c.Assert(m.Repository.AddLayer(layer.parent), IsNil)
+	c.Assert(m.Repository.AddLayer(layer.parent), Equals, ErrLayerExists)
 	c.Assert(len(m.Repository.layers), Equals, 2)
 	m.Repository.RemoveLayer(layer)
 	c.Assert(len(m.Repository.layers), Equals, 1)
-	m.Repository.RemoveLayer(layer2)
+	m.Repository.RemoveLayer(layer.parent)
 	c.Assert(len(m.Repository.layers), Equals, 0)
 }
