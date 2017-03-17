@@ -15,6 +15,12 @@ func (m *mountSuite) TestBasicRepository(c *C) {
 	c.Assert(r.editMutex, NotNil)
 	c.Assert(r.layers, NotNil)
 	c.Assert(r.mounts, NotNil)
+	_, err = NewRepository("/dev/zero")
+	c.Assert(err, NotNil)
+
+	r.baseDir = "/dev/zero"
+	_, err = r.TempDir()
+	c.Assert(err, NotNil)
 }
 
 func (m *mountSuite) TestRepositoryPropagation(c *C) {
@@ -38,6 +44,7 @@ func (m *mountSuite) TestRepositoryPropagation(c *C) {
 	m.Repository.RemoveMount(image.mount)
 	c.Assert(len(m.Repository.mounts), Equals, 0)
 
+	// XXX here too
 	c.Assert(m.Repository.AddMount(image.mount), IsNil)
 	c.Assert(len(m.Repository.mounts), Equals, 1)
 	m.Repository.RemoveMount(image.mount)
