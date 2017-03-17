@@ -9,6 +9,8 @@
 package overmount
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 )
 
@@ -30,6 +32,12 @@ var (
 
 	// ErrInvalidAsset is returned when the asset cannot be used.
 	ErrInvalidAsset = errors.New("invalid asset")
+
+	// ErrLayerExists is called when a layer id already exists in the repository.
+	ErrLayerExists = errors.New("layer already exists")
+
+	// ErrMountExists is called when a mount already exists in the repository.
+	ErrMountExists = errors.New("mount already exists")
 )
 
 const (
@@ -57,19 +65,23 @@ const (
 // Repositories can hold any number of mounts and layers. They do not
 // necessarily need to be related.
 type Repository struct {
-	BaseDir string
+	baseDir string
+	layers  map[string]*Layer
+	mounts  []*Mount
+
+	editMutex *sync.Mutex
 }
 
 // Mount represents a single overlay mount. The lower value is computed from
 // the parent layer of the layer provided to the NewMount call. The target and
 // upper dirs are computed from the passed layer.
 type Mount struct {
-	Target string
-	Upper  string
-	Lower  string
-
-	work    string
-	mounted bool
+	target     string
+	upper      string
+	lower      string
+	repository *Repository
+	work       string
+	mounted    bool
 }
 
 // Layer is the representation of a filesystem layer. Layers are organized in a
@@ -81,10 +93,10 @@ type Mount struct {
 // See https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt for
 // more information on mount flags.
 type Layer struct {
-	ID         string
-	Parent     *Layer
-	Asset      *Asset
-	Repository *Repository
+	id         string
+	parent     *Layer
+	asset      *Asset
+	repository *Repository
 }
 
 // Image is the representation of a set of sequential layers to be mounted.

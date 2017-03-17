@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/pkg/errors"
 )
@@ -12,12 +13,17 @@ import (
 // NewRepository constructs a *Repository and creates the dir in which the
 // repository lives. A repository is used to hold images and mounts.
 func NewRepository(baseDir string) (*Repository, error) {
-	return &Repository{BaseDir: baseDir}, os.MkdirAll(baseDir, 0700)
+	return &Repository{
+		baseDir:   baseDir,
+		layers:    map[string]*Layer{},
+		mounts:    []*Mount{},
+		editMutex: new(sync.Mutex),
+	}, os.MkdirAll(baseDir, 0700)
 }
 
 // TempDir returns a temporary path within the repository
 func (r *Repository) TempDir() (string, error) {
-	basePath := filepath.Join(r.BaseDir, tmpdirBase)
+	basePath := filepath.Join(r.baseDir, tmpdirBase)
 	if err := os.MkdirAll(basePath, 0700); err != nil {
 		return "", err
 	}
@@ -34,16 +40,22 @@ func (r *Repository) NewMount(target, lower, upper string) (*Mount, error) {
 		return nil, errors.Wrap(ErrMountCannotProceed, err.Error())
 	}
 
-	return &Mount{
-		Target: target,
-		Upper:  upper,
-		Lower:  lower,
+	mount := &Mount{
+		target: target,
+		upper:  upper,
+		lower:  lower,
 		work:   workDir,
-	}, nil
+	}
+
+	if err := r.AddMount(mount); err != nil {
+		return nil, err
+	}
+
+	return mount, nil
 }
 
 func (r *Repository) mkdirCheckRel(path string) error {
-	rel, err := filepath.Rel(r.BaseDir, path)
+	rel, err := filepath.Rel(r.baseDir, path)
 	if err != nil {
 		return err
 	}
@@ -53,4 +65,49 @@ func (r *Repository) mkdirCheckRel(path string) error {
 	}
 
 	return os.MkdirAll(path, 0700)
+}
+
+func (r *Repository) edit(editFunc func() error) error {
+	r.editMutex.Lock()
+	defer r.editMutex.Unlock()
+	return editFunc()
+}
+
+// AddLayer adds a layer to the repository.
+func (r *Repository) AddLayer(layer *Layer) error {
+	return r.edit(func() error {
+		if _, ok := r.layers[layer.id]; ok {
+			return ErrLayerExists
+		}
+		r.layers[layer.id] = layer
+		return nil
+	})
+}
+
+// RemoveLayer removes a layer from the repository
+func (r *Repository) RemoveLayer(layer *Layer) {
+	r.edit(func() error {
+		delete(r.layers, layer.id)
+		return nil
+	})
+}
+
+// AddMount adds a layer to the repository.
+func (r *Repository) AddMount(mount *Mount) error {
+	return r.edit(func() error {
+		r.mounts = append(r.mounts, mount)
+		return nil
+	})
+}
+
+// RemoveMount removes a layer from the repository
+func (r *Repository) RemoveMount(mount *Mount) {
+	r.edit(func() error {
+		for i, x := range r.mounts {
+			if mount.target == x.target && mount.upper == x.upper && mount.lower == x.lower && mount.work == x.work {
+				r.mounts = append(r.mounts[:i], r.mounts[i+1:]...)
+			}
+		}
+		return nil
+	})
 }

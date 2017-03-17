@@ -44,7 +44,7 @@ func (m *mountSuite) TestRepositoryTempDir(c *C) {
 	t, err := m.Repository.TempDir()
 	c.Assert(err, IsNil)
 
-	p, err := filepath.Rel(m.Repository.BaseDir, t)
+	p, err := filepath.Rel(m.Repository.baseDir, t)
 	c.Assert(err, IsNil)
 	first, _ := path.Split(p)
 	c.Assert(err, IsNil)
@@ -94,7 +94,7 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 			defer close(errChan)
 
 			err = tw.WriteHeader(&tar.Header{
-				Name:     image.layer.ID,
+				Name:     image.layer.id,
 				Mode:     0600,
 				Typeflag: tar.TypeReg,
 			})
@@ -108,7 +108,7 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 			}
 		}(target)
 
-		c.Assert(image.layer.Asset.Read(r), IsNil)
+		c.Assert(image.layer.asset.Read(r), IsNil)
 		fis, err := ioutil.ReadDir(target)
 		c.Assert(err, IsNil)
 
@@ -116,6 +116,10 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 
 		if len(layers) > 1 {
 			c.Assert(image.Unmount(), IsNil)
+		}
+
+		for _, layer := range layers {
+			m.Repository.RemoveLayer(layer)
 		}
 	}
 }
