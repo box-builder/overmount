@@ -43,7 +43,20 @@ func (l *Layer) Path() string {
 
 // Unpack unpacks the asset into the layer Path(). It returns the computed digest.
 func (l *Layer) Unpack(reader io.Reader) (digest.Digest, error) {
+	l.asset.ResetDigest()
+
 	if err := l.asset.Read(reader); err != nil {
+		return digest.Digest(""), err
+	}
+
+	return l.asset.Digest(), nil
+}
+
+// Pack archives the layer to the writer as a tar file.
+func (l *Layer) Pack(writer io.Writer) (digest.Digest, error) {
+	l.asset.ResetDigest()
+
+	if err := l.asset.Write(writer); err != nil {
 		return digest.Digest(""), err
 	}
 

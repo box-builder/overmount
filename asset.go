@@ -99,3 +99,9 @@ func (a *Asset) Write(writer io.Writer) error {
 
 	return nil
 }
+
+// ResetDigest resets the digester so it can re-calculate e.g. in a scenario
+// where more than one read/write (or swapping between the two) is called.
+func (a *Asset) ResetDigest() {
+	a.digest = digest.SHA256.Digester()
+}

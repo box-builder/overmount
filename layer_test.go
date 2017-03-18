@@ -31,6 +31,8 @@ func (m *mountSuite) TestLayerProperties(c *C) {
 	c.Assert(d2, Not(Equals), digest.Digest("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
 
 	dg := digest.SHA256.Digester()
-	c.Assert(layer.Write(dg.Hash()))
+	dg2, err := layer.Pack(dg.Hash())
+	c.Assert(err, IsNil)
 	c.Assert(dg.Digest(), Equals, d2)
+	c.Assert(dg2, Equals, dg.Digest())
 }
