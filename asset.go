@@ -63,7 +63,14 @@ func (a *Asset) Path() string {
 // Accepts io.Reader, not *tar.Reader!
 func (a *Asset) Read(reader io.Reader) error {
 	if err := a.checkDir(); err != nil {
-		return err
+		mkdirerr := os.MkdirAll(a.path, 0700)
+		if mkdirerr != nil {
+			return errors.Wrap(err, mkdirerr.Error())
+		}
+
+		if err := a.checkDir(); err != nil {
+			return err
+		}
 	}
 
 	err := archive.Unpack(io.TeeReader(reader, a.digest.Hash()), a.path, &archive.TarOptions{WhiteoutFormat: archive.OverlayWhiteoutFormat})
@@ -77,6 +84,10 @@ func (a *Asset) Read(reader io.Reader) error {
 // Write a tarball from the filesystem. Accepts an io.Writer, not a
 // *tar.Writer!
 func (a *Asset) Write(writer io.Writer) error {
+	if err := a.checkDir(); err != nil {
+		return err
+	}
+
 	reader, err := archive.Tar(a.path, archive.Uncompressed)
 	if err != nil {
 		return err
