@@ -16,7 +16,7 @@ func (i *Image) Mount() error {
 	upper := i.layer.Path()
 	target := i.layer.MountPath()
 
-	layer := i.layer.parent
+	layer := i.layer.Parent()
 	if layer == nil {
 		return errors.Wrap(ErrMountCannotProceed, "must have at least two layers")
 	}
@@ -32,7 +32,7 @@ func (i *Image) Mount() error {
 		} else {
 			lower = layer.Path()
 		}
-		layer = layer.parent
+		layer = layer.Parent()
 	}
 
 	for _, path := range []string{target, upper} {

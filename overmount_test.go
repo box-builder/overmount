@@ -94,7 +94,7 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 			defer close(errChan)
 
 			err = tw.WriteHeader(&tar.Header{
-				Name:     image.layer.id,
+				Name:     image.layer.ID(),
 				Mode:     0600,
 				Typeflag: tar.TypeReg,
 			})

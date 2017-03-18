@@ -31,6 +31,16 @@ func (r *Repository) NewLayer(id string, parent *Layer) (*Layer, error) {
 	return layer, nil
 }
 
+// ID returns the ID of the layer.
+func (l *Layer) ID() string {
+	return l.id
+}
+
+// Parent returns the parent layer.
+func (l *Layer) Parent() *Layer {
+	return l.parent
+}
+
 // MountPath gets the mount path for a given subpath.
 func (l *Layer) MountPath() string {
 	return filepath.Join(l.repository.baseDir, mountBase, l.id)
