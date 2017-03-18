@@ -36,6 +36,10 @@ func (a *Asset) checkDir() error {
 		return err
 	}
 
+	if !fi.IsDir() {
+		return errors.Wrap(ErrInvalidAsset, "not a directory")
+	}
+
 	if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
 		// here we attempt to remove a whole class of potential bugs.
 		return errors.Wrap(ErrInvalidAsset, "cannot operate on a symlink")
