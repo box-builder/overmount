@@ -11,7 +11,7 @@ install_box:
 	@sh install_box.sh
 
 test: install_box
-	$$(which box) -t erikh/overmount build.rb
+	box -t erikh/overmount build.rb
 	make run-docker
 
 test-ci:
