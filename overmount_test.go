@@ -188,6 +188,8 @@ func (m *mountSuite) TestImageUnpack(c *C) {
 	c.Assert(err, IsNil)
 	_, err = os.Stat(path.Join(parent.MountPath(), "/go/bin"))
 	c.Assert(err, IsNil)
+	_, err = os.Stat(path.Join(parent.MountPath(), "/etc/passwd"))
+	c.Assert(err, IsNil)
 	c.Assert(image.Unmount(), IsNil)
 	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/go/bin/go"))
 	c.Assert(err, NotNil)
