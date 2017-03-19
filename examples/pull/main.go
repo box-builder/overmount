@@ -115,7 +115,7 @@ func main() {
 			panic(err)
 		}
 
-		fmt.Printf("unpacked layer with digest %q (id: %v) to %v\n", digest[7:19], layer.ID[:12], layer.Path())
+		fmt.Printf("unpacked layer with digest %q (id: %v) to %v\n", digest[7:19], layer.ID()[:12], layer.Path())
 	}
 
 	image := repo.NewImage(parent)
