@@ -11,7 +11,7 @@ install_box:
 	@sh install_box.sh
 
 test: install_box
-	box -t erikh/overmount build.rb	
+	$(shell which box) -t erikh/overmount build.rb	
 	docker run -v /var/run/docker.sock:/var/run/docker.sock -it -v /tmp --privileged --rm erikh/overmount
 
 docker-test:
