@@ -50,8 +50,7 @@ func (a *Asset) checkDir() error {
 	return nil
 }
 
-// Digest returns the digest of the read/write; Read() or Write() must be
-// called first!
+// Digest returns the digest of the last pack or unpack.
 func (a *Asset) Digest() digest.Digest {
 	return a.digest.Digest()
 }
@@ -64,6 +63,8 @@ func (a *Asset) Path() string {
 // Unpack from the io.Reader (must be a tar file!) and unpack to the filesystem.
 // Accepts io.Reader, not *tar.Reader!
 func (a *Asset) Unpack(reader io.Reader) error {
+	a.resetDigest()
+
 	if err := a.checkDir(); err != nil {
 		mkdirerr := os.MkdirAll(a.path, 0700)
 		if mkdirerr != nil {
@@ -86,6 +87,8 @@ func (a *Asset) Unpack(reader io.Reader) error {
 // Pack a tarball from the filesystem. Accepts an io.Writer, not a
 // *tar.Writer!
 func (a *Asset) Pack(writer io.Writer) error {
+	a.resetDigest()
+
 	if err := a.checkDir(); err != nil {
 		return err
 	}
@@ -102,8 +105,8 @@ func (a *Asset) Pack(writer io.Writer) error {
 	return nil
 }
 
-// ResetDigest resets the digester so it can re-calculate e.g. in a scenario
+// resetDigest resets the digester so it can re-calculate e.g. in a scenario
 // where more than one read/write (or swapping between the two) is called.
-func (a *Asset) ResetDigest() {
+func (a *Asset) resetDigest() {
 	a.digest = digest.SHA256.Digester()
 }
