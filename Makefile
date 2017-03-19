@@ -12,7 +12,7 @@ install_box:
 
 test: install_box
 	$(shell which box) -t erikh/overmount build.rb	
-	docker run -v /var/run/docker.sock:/var/run/docker.sock -it -v /tmp --privileged --rm erikh/overmount
+	docker run -v /var/run/docker.sock:/var/run/docker.sock -v /tmp --privileged --rm erikh/overmount
 
 docker-test:
 	go build -v -o /dev/null ./examples/... 
