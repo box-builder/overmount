@@ -9,6 +9,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const emptyDigest = digest.Digest("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+
 // Asset is the representation of an on-disk asset. Assets usually are a pair
 // of (path, tar) where one direction is applied; f.e., you can copy from the
 // tar to the dir, or the dir to the tar using the Read and Write calls.
@@ -59,9 +61,9 @@ func (a *Asset) Path() string {
 	return a.path
 }
 
-// Read from the io.Reader (must be a tar file!) and unpack to the filesystem.
+// Unpack from the io.Reader (must be a tar file!) and unpack to the filesystem.
 // Accepts io.Reader, not *tar.Reader!
-func (a *Asset) Read(reader io.Reader) error {
+func (a *Asset) Unpack(reader io.Reader) error {
 	if err := a.checkDir(); err != nil {
 		mkdirerr := os.MkdirAll(a.path, 0700)
 		if mkdirerr != nil {
@@ -81,9 +83,9 @@ func (a *Asset) Read(reader io.Reader) error {
 	return nil
 }
 
-// Write a tarball from the filesystem. Accepts an io.Writer, not a
+// Pack a tarball from the filesystem. Accepts an io.Writer, not a
 // *tar.Writer!
-func (a *Asset) Write(writer io.Writer) error {
+func (a *Asset) Pack(writer io.Writer) error {
 	if err := a.checkDir(); err != nil {
 		return err
 	}

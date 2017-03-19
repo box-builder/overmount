@@ -108,7 +108,7 @@ func (m *mountSuite) TestBasicImageMount(c *C) {
 			}
 		}(target)
 
-		c.Assert(image.layer.asset.Read(r), IsNil)
+		c.Assert(image.layer.asset.Unpack(r), IsNil)
 		fis, err := ioutil.ReadDir(target)
 		c.Assert(err, IsNil)
 

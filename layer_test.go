@@ -23,7 +23,7 @@ func (m *mountSuite) TestLayerProperties(c *C) {
 	c.Assert(err, IsNil)
 	defer resp.Body.Close()
 	d1 := layer.asset.Digest()
-	c.Assert(d1, Equals, digest.Digest("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+	c.Assert(d1, Equals, digest.Digest(emptyDigest))
 	gz, err := gzip.NewReader(resp.Body)
 	c.Assert(err, IsNil)
 	d2, err := layer.Unpack(gz)

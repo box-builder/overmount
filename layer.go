@@ -55,7 +55,7 @@ func (l *Layer) Path() string {
 func (l *Layer) Unpack(reader io.Reader) (digest.Digest, error) {
 	l.asset.ResetDigest()
 
-	if err := l.asset.Read(reader); err != nil {
+	if err := l.asset.Unpack(reader); err != nil {
 		return digest.Digest(""), err
 	}
 
@@ -66,7 +66,7 @@ func (l *Layer) Unpack(reader io.Reader) (digest.Digest, error) {
 func (l *Layer) Pack(writer io.Writer) (digest.Digest, error) {
 	l.asset.ResetDigest()
 
-	if err := l.asset.Write(writer); err != nil {
+	if err := l.asset.Pack(writer); err != nil {
 		return digest.Digest(""), err
 	}
 
