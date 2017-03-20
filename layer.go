@@ -8,6 +8,10 @@ import (
 	digest "github.com/opencontainers/go-digest"
 )
 
+const (
+	rootFSPath = "rootfs"
+)
+
 // NewLayer prepares a new layer for work. The ID is the directory that will be
 // created in the repository; see NewRepository for more info.
 func (r *Repository) NewLayer(id string, parent *Layer) (*Layer, error) {
@@ -46,9 +50,13 @@ func (l *Layer) MountPath() string {
 	return filepath.Join(l.repository.baseDir, mountBase, l.id)
 }
 
+func (l *Layer) layerBase() string {
+	return filepath.Join(l.repository.baseDir, layerBase, l.id)
+}
+
 // Path gets the layer store path for a given subpath.
 func (l *Layer) Path() string {
-	return filepath.Join(l.repository.baseDir, layerBase, l.id)
+	return filepath.Join(l.layerBase(), rootFSPath)
 }
 
 // Unpack unpacks the asset into the layer Path(). It returns the computed digest.
