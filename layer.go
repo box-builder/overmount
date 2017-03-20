@@ -40,10 +40,10 @@ func (r *Repository) newLayer(id string, parent *Layer, create bool) (*Layer, er
 		if err := layer.Create(); err != nil {
 			return layer, err // return the layer here (document later) in case they need to clean it up.
 		}
+	}
 
-		if err := r.AddLayer(layer); err != nil {
-			return nil, err
-		}
+	if err := r.AddLayer(layer); err != nil {
+		return nil, err
 	}
 
 	layer.asset, err = NewAsset(layer.Path(), digest.SHA256.Digester())
@@ -97,8 +97,9 @@ func (l *Layer) SaveParent() error {
 	return ioutil.WriteFile(l.parentsPath(), []byte(l.parent.ID()), 0600)
 }
 
-// RestoreParent reads any parent file and sets the layer accordingly. It does this recursively.
-func (l *Layer) RestoreParent() error {
+// LoadParent loads only the parent for this specific instance. See
+// RestoreParent for restoring the whole chain.
+func (l *Layer) LoadParent() error {
 	id, err := ioutil.ReadFile(l.parentsPath())
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -123,7 +124,20 @@ func (l *Layer) RestoreParent() error {
 
 	l.parent = parent
 
-	return parent.RestoreParent()
+	return nil
+}
+
+// RestoreParent reads any parent file and sets the layer accordingly. It does this recursively.
+func (l *Layer) RestoreParent() error {
+	if err := l.LoadParent(); err != nil {
+		return err
+	}
+
+	if l.parent != nil {
+		return l.parent.RestoreParent()
+	}
+
+	return nil
 }
 
 // Unpack unpacks the asset into the layer Path(). It returns the computed digest.

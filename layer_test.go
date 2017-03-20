@@ -48,6 +48,7 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 
 	var err error
 
+	parentID := layer.Parent().ID()
 	id := layer.ID()
 	m.Repository, err = NewRepository(m.Repository.baseDir)
 	c.Assert(err, IsNil)
@@ -61,4 +62,11 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 	}
 
 	c.Assert(count, Equals, layerCount)
+	m.Repository, err = NewRepository(m.Repository.baseDir)
+	c.Assert(err, IsNil)
+	layer, err = m.Repository.NewLayer(id, nil)
+	layer.parent = nil
+	c.Assert(layer.LoadParent(), IsNil)
+	c.Assert(layer.parent, NotNil)
+	c.Assert(layer.parent.ID(), Equals, parentID)
 }
