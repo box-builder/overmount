@@ -11,9 +11,9 @@ import (
 )
 
 func (m *mountSuite) TestLayerProperties(c *C) {
-	layer, err := m.Repository.NewLayer("test", nil)
+	layer, err := m.Repository.CreateLayer("test", nil)
 	c.Assert(err, IsNil)
-	_, err = m.Repository.NewLayer("test", nil)
+	_, err = m.Repository.CreateLayer("test", nil)
 	c.Assert(err, Equals, ErrLayerExists)
 	c.Assert(path.Base(layer.MountPath()), Equals, "test")
 	c.Assert(path.Dir(layer.MountPath()), Equals, path.Join(m.Repository.baseDir, mountBase))
@@ -35,4 +35,30 @@ func (m *mountSuite) TestLayerProperties(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(dg.Digest(), Equals, d2)
 	c.Assert(dg2, Equals, dg.Digest())
+}
+
+func (m *mountSuite) TestLayerParentCommit(c *C) {
+	layerCount := 10
+
+	_, layer := m.makeImage(c, layerCount)
+
+	for iter := layer; iter != nil; iter = iter.Parent() {
+		c.Assert(iter.SaveParent(), IsNil)
+	}
+
+	var err error
+
+	id := layer.ID()
+	m.Repository, err = NewRepository(m.Repository.baseDir)
+	c.Assert(err, IsNil)
+	layer, err = m.Repository.NewLayer(id, nil)
+	c.Assert(err, IsNil)
+	c.Assert(layer.RestoreParent(), IsNil)
+
+	var count int
+	for iter := layer; iter != nil; iter = iter.Parent() {
+		count++
+	}
+
+	c.Assert(count, Equals, layerCount)
 }
