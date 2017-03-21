@@ -22,7 +22,7 @@ func (m *mountSuite) TestImageMountUnmount(c *C) {
 func (m *mountSuite) TestImageCommit(c *C) {
 	image, layer := m.makeImage(c, 10)
 	for iter := layer; iter != nil; iter = iter.Parent() {
-		_, err := os.Stat(iter.parentsPath())
+		_, err := os.Stat(iter.parentPath())
 		c.Assert(err, NotNil)
 	}
 
@@ -30,7 +30,7 @@ func (m *mountSuite) TestImageCommit(c *C) {
 
 	for iter := layer; iter != nil; iter = iter.Parent() {
 		if iter.Parent() != nil {
-			_, err := os.Stat(iter.parentsPath())
+			_, err := os.Stat(iter.parentPath())
 			c.Assert(err, IsNil)
 		}
 	}

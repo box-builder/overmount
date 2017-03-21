@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	rootFSPath  = "rootfs"
-	parentsPath = "parents.json"
-	configPath  = "config.json"
+	rootFSPath = "rootfs"
+	parentPath = "parent"
+	configPath = "config.json"
 )
 
 // CreateLayer prepares a new layer for work and creates it in the repository.
@@ -87,8 +87,8 @@ func (l *Layer) Path() string {
 	return filepath.Join(l.layerBase(), rootFSPath)
 }
 
-func (l *Layer) parentsPath() string {
-	return filepath.Join(l.layerBase(), parentsPath)
+func (l *Layer) parentPath() string {
+	return filepath.Join(l.layerBase(), parentPath)
 }
 
 func (l *Layer) configPath() string {
@@ -124,7 +124,7 @@ func (l *Layer) SaveParent() error {
 		return nil
 	}
 
-	fi, err := os.Stat(l.parentsPath())
+	fi, err := os.Stat(l.parentPath())
 	if err != nil {
 		if os.IsNotExist(err) {
 			return l.OverwriteParent()
@@ -143,13 +143,13 @@ func (l *Layer) OverwriteParent() error {
 		return nil
 	}
 
-	return ioutil.WriteFile(l.parentsPath(), []byte(l.parent.ID()), 0600)
+	return ioutil.WriteFile(l.parentPath(), []byte(l.parent.ID()), 0600)
 }
 
 // LoadParent loads only the parent for this specific instance. See
 // RestoreParent for restoring the whole chain.
 func (l *Layer) LoadParent() error {
-	id, err := ioutil.ReadFile(l.parentsPath())
+	id, err := ioutil.ReadFile(l.parentPath())
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
