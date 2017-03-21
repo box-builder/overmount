@@ -1,18 +1,21 @@
 package overmount
 
 import (
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
 const (
 	rootFSPath  = "rootfs"
 	parentsPath = "parents.json"
+	configPath  = "config.json"
 )
 
 // CreateLayer prepares a new layer for work and creates it in the repository.
@@ -86,6 +89,33 @@ func (l *Layer) Path() string {
 
 func (l *Layer) parentsPath() string {
 	return filepath.Join(l.layerBase(), parentsPath)
+}
+
+func (l *Layer) configPath() string {
+	return filepath.Join(l.layerBase(), configPath)
+}
+
+// Config returns a reference to the image configuration for this layer.
+func (l *Layer) Config() (*v1.ImageConfig, error) {
+	f, err := os.Open(l.configPath())
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	var i v1.ImageConfig
+	return &i, json.NewDecoder(f).Decode(&i)
+}
+
+// SaveConfig writes a *v1.Image configuration to the repository for the layer.
+func (l *Layer) SaveConfig(config *v1.ImageConfig) error {
+	f, err := os.Create(l.configPath())
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return json.NewEncoder(f).Encode(config)
 }
 
 // SaveParent will silently only save the

@@ -6,6 +6,7 @@ import (
 	"path"
 
 	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 
 	. "gopkg.in/check.v1"
 )
@@ -70,4 +71,15 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 	c.Assert(layer.LoadParent(), IsNil)
 	c.Assert(layer.parent, NotNil)
 	c.Assert(layer.parent.ID(), Equals, parentID)
+}
+
+func (m *mountSuite) TestLayerConfig(c *C) {
+	_, layer := m.makeImage(c, 10)
+	config, err := layer.Config()
+	c.Assert(config, IsNil)
+	c.Assert(err, NotNil)
+	c.Assert(layer.SaveConfig(&v1.ImageConfig{Cmd: []string{"quux"}}), IsNil)
+	config, err = layer.Config()
+	c.Assert(err, IsNil)
+	c.Assert(config.Cmd, DeepEquals, []string{"quux"})
 }
