@@ -58,3 +58,14 @@ func (i *Image) Unmount() error {
 	}
 	return i.mount.Close()
 }
+
+// Commit saves all the parents
+func (i *Image) Commit() error {
+	for iter := i.layer; iter != nil; iter = iter.Parent() {
+		if err := iter.SaveParent(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
