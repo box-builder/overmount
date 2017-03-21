@@ -88,8 +88,27 @@ func (l *Layer) parentsPath() string {
 	return filepath.Join(l.layerBase(), parentsPath)
 }
 
-// SaveParent (over)writes the parent setting for this layer.
+// SaveParent will silently only save the
 func (l *Layer) SaveParent() error {
+	if l.parent == nil {
+		return nil
+	}
+
+	fi, err := os.Stat(l.parentsPath())
+	if err != nil {
+		if os.IsNotExist(err) {
+			return l.OverwriteParent()
+		}
+		return err
+	} else if !fi.Mode().IsRegular() {
+		return errors.Wrap(ErrInvalidLayer, "parent configuration is invalid")
+	}
+
+	return nil
+}
+
+// OverwriteParent overwrites the parent setting for this layer.
+func (l *Layer) OverwriteParent() error {
 	if l.parent == nil {
 		return nil
 	}

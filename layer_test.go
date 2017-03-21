@@ -44,6 +44,7 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 
 	for iter := layer; iter != nil; iter = iter.Parent() {
 		c.Assert(iter.SaveParent(), IsNil)
+		c.Assert(iter.SaveParent(), IsNil) // double save should have no error
 	}
 
 	var err error
