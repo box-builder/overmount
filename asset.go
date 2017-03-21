@@ -2,11 +2,9 @@ package overmount
 
 import (
 	"io"
-	"os"
 
 	"github.com/docker/docker/pkg/archive"
 	digest "github.com/opencontainers/go-digest"
-	"github.com/pkg/errors"
 )
 
 const emptyDigest = digest.Digest("sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
@@ -31,25 +29,6 @@ func NewAsset(path string, digest digest.Digester) (*Asset, error) {
 	return a, nil
 }
 
-// checkDir validates the directory is not a symlink and exists.
-func (a *Asset) checkDir() error {
-	fi, err := os.Lstat(a.Path())
-	if err != nil {
-		return err
-	}
-
-	if !fi.IsDir() {
-		return errors.Wrap(ErrInvalidAsset, "not a directory")
-	}
-
-	if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
-		// here we attempt to remove a whole class of potential bugs.
-		return errors.Wrap(ErrInvalidAsset, "cannot operate on a symlink")
-	}
-
-	return nil
-}
-
 // Digest returns the digest of the last pack or unpack.
 func (a *Asset) Digest() digest.Digest {
 	return a.digest.Digest()
@@ -64,16 +43,8 @@ func (a *Asset) Path() string {
 // Accepts io.Reader, not *tar.Reader!
 func (a *Asset) Unpack(reader io.Reader) error {
 	a.resetDigest()
-
-	if err := a.checkDir(); err != nil {
-		mkdirerr := os.MkdirAll(a.path, 0700)
-		if mkdirerr != nil {
-			return errors.Wrap(err, mkdirerr.Error())
-		}
-
-		if err := a.checkDir(); err != nil {
-			return err
-		}
+	if err := checkDir(a.path, ErrInvalidAsset); err != nil {
+		return err
 	}
 
 	err := archive.Unpack(io.TeeReader(reader, a.digest.Hash()), a.path, &archive.TarOptions{WhiteoutFormat: archive.OverlayWhiteoutFormat})
@@ -89,7 +60,7 @@ func (a *Asset) Unpack(reader io.Reader) error {
 func (a *Asset) Pack(writer io.Writer) error {
 	a.resetDigest()
 
-	if err := a.checkDir(); err != nil {
+	if err := checkDir(a.path, ErrInvalidAsset); err != nil {
 		return err
 	}
 
