@@ -2,9 +2,38 @@ package overmount
 
 import (
 	"os"
+	"sync"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/pkg/errors"
 )
+
+func edit(lockfile string, mutex *sync.Mutex, editFunc func() error) (retErr error) {
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	f, err := os.Create(lockfile)
+	if err != nil {
+		return err
+	}
+
+	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := unix.Flock(int(f.Fd()), unix.LOCK_UN); err != nil {
+			retErr = errors.Wrap(retErr, err.Error())
+		}
+		f.Close()
+		if err := os.Remove(f.Name()); err != nil {
+			retErr = errors.Wrap(retErr, err.Error())
+		}
+	}()
+
+	return editFunc()
+}
 
 // checkDir validates the directory is not a symlink and exists.
 func checkDir(path string, wrapErr error) error {

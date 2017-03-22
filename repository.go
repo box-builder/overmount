@@ -3,12 +3,15 @@ package overmount
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
 )
+
+const lockFile = "repository.lock"
 
 // NewRepository constructs a *Repository and creates the dir in which the
 // repository lives. A repository is used to hold images and mounts.
@@ -68,9 +71,7 @@ func (r *Repository) mkdirCheckRel(path string) error {
 }
 
 func (r *Repository) edit(editFunc func() error) error {
-	r.editMutex.Lock()
-	defer r.editMutex.Unlock()
-	return editFunc()
+	return edit(path.Join(r.baseDir, lockFile), r.editMutex, editFunc)
 }
 
 // AddLayer adds a layer to the repository.

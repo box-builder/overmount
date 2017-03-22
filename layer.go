@@ -5,7 +5,9 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
+	"sync"
 
 	digest "github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go/v1"
@@ -13,9 +15,10 @@ import (
 )
 
 const (
-	rootFSPath = "rootfs"
-	parentPath = "parent"
-	configPath = "config.json"
+	rootFSPath   = "rootfs"
+	parentPath   = "parent"
+	configPath   = "config.json"
+	lockFilePath = "lockfile"
 )
 
 // CreateLayer prepares a new layer for work and creates it in the repository.
@@ -37,6 +40,7 @@ func (r *Repository) newLayer(id string, parent *Layer, create bool) (*Layer, er
 		id:         id,
 		parent:     parent,
 		repository: r,
+		editMutex:  new(sync.Mutex),
 	}
 
 	if create {
@@ -55,6 +59,10 @@ func (r *Repository) newLayer(id string, parent *Layer, create bool) (*Layer, er
 	}
 
 	return layer, nil
+}
+
+func (l *Layer) edit(editFunc func() error) (retErr error) {
+	return edit(path.Join(l.layerBase(), lockFilePath), l.editMutex, editFunc)
 }
 
 // ID returns the ID of the layer.
@@ -109,36 +117,40 @@ func (l *Layer) Config() (*v1.ImageConfig, error) {
 
 // SaveConfig writes a *v1.Image configuration to the repository for the layer.
 func (l *Layer) SaveConfig(config *v1.ImageConfig) error {
-	f, err := os.Create(l.configPath())
-	if err != nil {
-		return err
-	}
-	defer f.Close()
+	return l.edit(func() error {
+		f, err := os.Create(l.configPath())
+		if err != nil {
+			return err
+		}
+		defer f.Close()
 
-	return json.NewEncoder(f).Encode(config)
+		return json.NewEncoder(f).Encode(config)
+	})
 }
 
 // SaveParent will silently only save the
 func (l *Layer) SaveParent() error {
-	if l.parent == nil {
-		return nil
-	}
-
-	fi, err := os.Stat(l.parentPath())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return l.OverwriteParent()
+	return l.edit(func() error {
+		if l.parent == nil {
+			return nil
 		}
-		return err
-	} else if !fi.Mode().IsRegular() {
-		return errors.Wrap(ErrInvalidLayer, "parent configuration is invalid")
-	}
 
-	return nil
+		fi, err := os.Stat(l.parentPath())
+		if err != nil {
+			if os.IsNotExist(err) {
+				return l.overwriteParent()
+			}
+			return err
+		} else if !fi.Mode().IsRegular() {
+			return errors.Wrap(ErrInvalidLayer, "parent configuration is invalid")
+		}
+
+		return nil
+	})
 }
 
 // OverwriteParent overwrites the parent setting for this layer.
-func (l *Layer) OverwriteParent() error {
+func (l *Layer) overwriteParent() error {
 	if l.parent == nil {
 		return nil
 	}
@@ -191,24 +203,20 @@ func (l *Layer) RestoreParent() error {
 
 // Unpack unpacks the asset into the layer Path(). It returns the computed digest.
 func (l *Layer) Unpack(reader io.Reader) (digest.Digest, error) {
-	if err := l.asset.Unpack(reader); err != nil {
-		return digest.Digest(""), err
-	}
-
-	return l.asset.Digest(), nil
+	err := l.edit(func() error { return l.asset.Unpack(reader) })
+	return l.asset.Digest(), err
 }
 
 // Pack archives the layer to the writer as a tar file.
 func (l *Layer) Pack(writer io.Writer) (digest.Digest, error) {
-	if err := l.asset.Pack(writer); err != nil {
-		return digest.Digest(""), err
-	}
-
-	return l.asset.Digest(), nil
+	err := l.edit(func() error { return l.asset.Pack(writer) })
+	return l.asset.Digest(), err
 }
 
 // Remove a layer from the filesystem and the repository.
 func (l *Layer) Remove() error {
-	l.repository.RemoveLayer(l)
-	return os.RemoveAll(l.Path())
+	return l.edit(func() error {
+		l.repository.RemoveLayer(l)
+		return os.RemoveAll(l.Path())
+	})
 }
