@@ -103,6 +103,8 @@ type Layer struct {
 	parent     *Layer
 	asset      *Asset
 	repository *Repository
+
+	editMutex *sync.Mutex
 }
 
 // Image is the representation of a set of sequential layers to be mounted.
