@@ -24,6 +24,6 @@ run-docker:
 
 docker-test:
 	go build -v -o /dev/null ./examples/... ./om/...
-	go list ./... | grep -v vendor | xargs go test -cover -v -check.v
+	for test in $(shell go list ./... | grep -v vendor); do go test -cover -v $${test} -check.v; done
 
 .PHONY: test
