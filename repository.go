@@ -8,8 +8,6 @@ import (
 	"strings"
 	"sync"
 
-	"golang.org/x/sys/unix"
-
 	"github.com/pkg/errors"
 )
 
@@ -72,30 +70,8 @@ func (r *Repository) mkdirCheckRel(path string) error {
 	return os.MkdirAll(path, 0700)
 }
 
-func (r *Repository) edit(editFunc func() error) (retErr error) {
-	r.editMutex.Lock()
-	defer r.editMutex.Unlock()
-
-	f, err := os.Create(path.Join(r.baseDir, lockFile))
-	if err != nil {
-		return err
-	}
-
-	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
-		return err
-	}
-
-	defer func() {
-		if err := unix.Flock(int(f.Fd()), unix.LOCK_UN); err != nil {
-			retErr = err
-		}
-		f.Close()
-		if err := os.Remove(f.Name()); err != nil {
-			retErr = errors.Wrap(retErr, err.Error())
-		}
-	}()
-
-	return editFunc()
+func (r *Repository) edit(editFunc func() error) error {
+	return edit(path.Join(r.baseDir, lockFile), r.editMutex, editFunc)
 }
 
 // AddLayer adds a layer to the repository.
