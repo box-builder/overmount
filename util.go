@@ -27,9 +27,6 @@ func edit(lockfile string, mutex *sync.Mutex, editFunc func() error) (retErr err
 			retErr = errors.Wrap(retErr, err.Error())
 		}
 		f.Close()
-		if err := os.Remove(f.Name()); err != nil {
-			retErr = errors.Wrap(retErr, err.Error())
-		}
 	}()
 
 	return editFunc()
