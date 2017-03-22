@@ -26,10 +26,19 @@ func main() {
 		panic("you need to be root to run this thing; sorry!")
 	}
 
-	tmpdir, err := ioutil.TempDir("", "")
-	if err != nil {
-		panic(err)
+	var tmpdir string
+
+	if len(os.Args) == 2 {
+		tmpdir = os.Args[1]
+	} else {
+		var err error
+
+		tmpdir, err = ioutil.TempDir("", "")
+		if err != nil {
+			panic(err)
+		}
 	}
+
 	repo, err := overmount.NewRepository(tmpdir)
 	if err != nil {
 		panic(err)
@@ -102,16 +111,19 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		layer, err := repo.NewLayer(layerID, parent)
+		layer, err := repo.CreateLayer(layerID, parent)
 		if err != nil {
-			panic(err)
-		}
-		if err := os.MkdirAll(layer.Path(), 0700); err != nil {
+			if os.IsExist(err) {
+				continue
+			}
 			panic(err)
 		}
 		parent = layer
 		digest, err := layer.Unpack(tarfile)
 		if err != nil {
+			if os.IsExist(err) {
+				continue
+			}
 			panic(err)
 		}
 
@@ -120,6 +132,11 @@ func main() {
 
 	image := repo.NewImage(parent)
 	if err := image.Mount(); err != nil {
+		panic(err)
+	}
+
+	// Saves all the parent references to the repository for future lookups.
+	if err := image.Commit(); err != nil {
 		panic(err)
 	}
 
