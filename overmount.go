@@ -119,8 +119,15 @@ type Image struct {
 // Importer is an interface to image importers; ways to get images into
 // overmount repositories.
 type Importer interface {
-	// Import takes a tar represented as an io.Reader, and converts and unpacks
+	// Import takes a tar represented as an io.ReadCloser, and converts and unpacks
 	// it into the overmount repository.  Returns the top-most layer and any
 	// error.
-	Import(*Repository, io.Reader) (*Layer, error)
+	Import(*Repository, io.ReadCloser) (*Layer, error)
+}
+
+// Exporter is an interface to image exporters; ways to get images out of
+// overmount repositories.
+type Exporter interface {
+	// Export produces a tar represented as an io.ReadCloser from the Layer provided.
+	Export(*Layer) (io.ReadCloser, error)
 }

@@ -115,6 +115,11 @@ func (r *Repository) RemoveMount(mount *Mount) {
 }
 
 // Import an image (provided over reader) to the repository.
-func (r *Repository) Import(i Importer, reader io.Reader) (*Layer, error) {
+func (r *Repository) Import(i Importer, reader io.ReadCloser) (*Layer, error) {
 	return i.Import(r, reader)
+}
+
+// Export an image (provided via writer) from the repository.
+func (r *Repository) Export(e Exporter, layer *Layer) (io.ReadCloser, error) {
+	return e.Export(layer)
 }
