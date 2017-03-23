@@ -34,6 +34,18 @@ func (a *Asset) Digest() digest.Digest {
 	return a.digest.Digest()
 }
 
+// LoadDigest processes the digest from the existing contents of the filesystem.
+func (a *Asset) LoadDigest() (digest.Digest, error) {
+	a.resetDigest()
+	reader, err := archive.Tar(a.path, archive.Uncompressed)
+	if err != nil {
+		return a.Digest(), err
+	}
+
+	_, err = io.Copy(a.digest.Hash(), reader)
+	return a.Digest(), err
+}
+
 // Path gets the filesystem path we will be working with.
 func (a *Asset) Path() string {
 	return a.path

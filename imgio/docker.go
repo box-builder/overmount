@@ -86,15 +86,29 @@ func (d *Docker) constructImage(up *unpackedImage) (*om.Layer, error) {
 			return nil, err
 		}
 
-		dg, err := layer.Unpack(f)
-		if err != nil {
-			return nil, err
-		}
-		f.Close()
-
+		defer f.Close()
 		layer.Parent = up.layers[parentID]
-		if err := layer.SaveParent(); err != nil {
-			return nil, err
+
+		var dg digest.Digest
+
+		if !layer.Exists() {
+			dg, err = layer.Unpack(f)
+			if err != nil {
+				return nil, err
+			}
+
+			if err := layer.SaveParent(); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := layer.RestoreParent(); err != nil {
+				return nil, err
+			}
+
+			dg, err = layer.Digest()
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		digestMap[dg] = layer
