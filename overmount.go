@@ -115,3 +115,12 @@ type Image struct {
 	layer      *Layer
 	mount      *Mount
 }
+
+// Importer is an interface to image importers; ways to get images into
+// overmount repositories.
+type Importer interface {
+	// Import takes a tar represented as an io.Reader, and converts and unpacks
+	// it into the overmount repository.  Returns the top-most layer and any
+	// error.
+	Import(*Repository, io.Reader) (*Layer, error)
+}

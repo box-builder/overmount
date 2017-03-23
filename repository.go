@@ -1,6 +1,7 @@
 package overmount
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
@@ -111,4 +112,9 @@ func (r *Repository) RemoveMount(mount *Mount) {
 		}
 		return nil
 	})
+}
+
+// Import an image (provided over reader) to the repository.
+func (r *Repository) Import(i Importer, reader io.Reader) (*Layer, error) {
+	return i.Import(r, reader)
 }
