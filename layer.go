@@ -76,6 +76,21 @@ func (l *Layer) MountPath() string {
 	return filepath.Join(l.repository.baseDir, mountBase, l.id)
 }
 
+// Exists indicates whether or not a layer already exists.
+func (l *Layer) Exists() bool {
+	fi, err := os.Stat(l.layerBase())
+	if err != nil {
+		return false
+	}
+
+	return fi.IsDir()
+}
+
+// Digest returns the digest.Digest for the layer and any error.
+func (l *Layer) Digest() (digest.Digest, error) {
+	return l.asset.LoadDigest()
+}
+
 // Create creates the layer and makes it available for use, if possible.
 // Otherwise, it returns an error.
 func (l *Layer) Create() error {
@@ -170,8 +185,10 @@ func (l *Layer) LoadParent() error {
 	}
 
 	parent, err := l.repository.NewLayer(string(id), nil)
-	if err != nil {
+	if err != nil && err != ErrLayerExists {
 		return err
+	} else if err == ErrLayerExists {
+		parent = l.repository.layers[string(id)]
 	}
 
 	fi, err := os.Stat(parent.layerBase())
