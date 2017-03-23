@@ -91,32 +91,25 @@ func (d *Docker) constructImage(up *unpackedImage) (*om.Layer, error) {
 
 		var dg digest.Digest
 
-		if !layer.Exists() {
-			dg, err = layer.Unpack(f)
-			if err != nil {
-				return nil, err
-			}
-
+		dg, err = layer.Unpack(f)
+		if err == nil {
 			if err := layer.SaveParent(); err != nil {
 				return nil, err
 			}
-		} else {
-			if err := layer.RestoreParent(); err != nil {
-				return nil, err
-			}
-
-			dg, err = layer.Digest()
-			if err != nil {
-				return nil, err
-			}
+		} else if !os.IsExist(err) {
+			return nil, err
 		}
 
 		digestMap[dg] = layer
 	}
 
 	topLayer := digest.Digest(up.image.RootFS.DiffIDs[len(up.image.RootFS.DiffIDs)-1])
+	top, ok := digestMap[topLayer]
+	if !ok {
+		return nil, errors.New("top layer doesn't appear to exist")
+	}
 
-	return digestMap[topLayer], digestMap[topLayer].SaveConfig(&up.image.Config)
+	return top, top.SaveConfig(&up.image.Config)
 }
 
 func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage, error) {

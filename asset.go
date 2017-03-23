@@ -55,10 +55,12 @@ func (a *Asset) Path() string {
 // Accepts io.Reader, not *tar.Reader!
 func (a *Asset) Unpack(reader io.Reader) error {
 	a.resetDigest()
+
 	if err := checkDir(a.path, ErrInvalidAsset); err != nil {
 		return err
 	}
 
+	// FIXME there's probably a double-unarchive bug here.
 	err := archive.Unpack(io.TeeReader(reader, a.digest.Hash()), a.path, &archive.TarOptions{WhiteoutFormat: archive.OverlayWhiteoutFormat})
 	if err != nil {
 		return err
