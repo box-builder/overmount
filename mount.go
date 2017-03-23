@@ -9,6 +9,16 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+func forceUnmount(target string) (retErr error) {
+	defer func() {
+		if retErr == nil {
+			retErr = os.RemoveAll(target)
+		}
+	}()
+
+	return unix.Unmount(target, 0) // showing restraint
+}
+
 // makeMountOptions makes the lower,upper,work filesystem options.
 func (m *Mount) makeMountOptions() (string, error) {
 	if m.lower == "" {

@@ -1,6 +1,10 @@
 package overmount
 
-import "github.com/pkg/errors"
+import (
+	"os"
+
+	"github.com/pkg/errors"
+)
 
 // NewImage preps a set of layers to be a part of an image. There must be at least two layers
 func (r *Repository) NewImage(topLayer *Layer) *Image {
@@ -15,6 +19,10 @@ func (r *Repository) NewImage(topLayer *Layer) *Image {
 func (i *Image) Mount() error {
 	upper := i.layer.Path()
 	target := i.layer.MountPath()
+
+	if fi, err := os.Stat(target); err == nil && fi.IsDir() {
+		return errors.Wrap(ErrMountCannotProceed, "mount exists")
+	}
 
 	layer := i.layer.Parent
 	if layer == nil {
@@ -54,8 +62,12 @@ func (i *Image) Mount() error {
 // Unmount unmounts the image. This does not affect layer storage.
 func (i *Image) Unmount() error {
 	if i.mount == nil {
-		return ErrMountCannotProceed
+		if err := forceUnmount(i.layer.MountPath()); err != nil {
+			return errors.Wrap(ErrMountCannotProceed, err.Error())
+		}
+		return nil
 	}
+
 	return i.mount.Close()
 }
 
