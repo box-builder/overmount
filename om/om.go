@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 
+	"github.com/docker/docker/client"
 	"github.com/erikh/overmount"
+	"github.com/erikh/overmount/imgio"
 	"github.com/urfave/cli"
 )
 
@@ -33,6 +37,11 @@ func main() {
 			Usage: "Perform commands on images",
 			Subcommands: []cli.Command{
 				{
+					Name:   "import",
+					Usage:  "import a docker image",
+					Action: importImage,
+				},
+				{
 					Name:   "list-layers",
 					Usage:  "list the layer IDs of an image",
 					Action: listLayers,
@@ -45,6 +54,39 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func importImage(ctx *cli.Context) {
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	if err != nil {
+		errExit(2, err)
+	}
+
+	if len(ctx.Args()) != 1 {
+		errExit(2, errors.New("please supply a docker image name (only one)"))
+	}
+
+	client, err := client.NewEnvClient()
+	if err != nil {
+		errExit(2, err)
+	}
+
+	docker, err := imgio.NewDocker(client)
+	if err != nil {
+		errExit(2, err)
+	}
+
+	reader, err := client.ImageSave(context.Background(), []string{ctx.Args()[0]})
+	if err != nil {
+		errExit(2, err)
+	}
+
+	layer, err := docker.Import(repo, reader)
+	if err != nil {
+		errExit(2, err)
+	}
+
+	fmt.Println(layer.ID())
 }
 
 func listLayers(ctx *cli.Context) {
