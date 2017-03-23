@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/term"
 	"github.com/erikh/overmount"
 	"github.com/erikh/overmount/imgio"
 	"github.com/urfave/cli"
@@ -41,6 +43,11 @@ func main() {
 					Name:   "import",
 					Usage:  "import a docker image",
 					Action: importImage,
+				},
+				{
+					Name:   "export",
+					Usage:  "export a docker image to stdout",
+					Action: exportImage,
 				},
 				{
 					Name:   "list-layers",
@@ -126,6 +133,47 @@ func mountImage(ctx *cli.Context) {
 	}
 
 	fmt.Println(layer.MountPath())
+}
+
+func exportImage(ctx *cli.Context) {
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	if err != nil {
+		errExit(2, err)
+	}
+
+	if len(ctx.Args()) != 1 {
+		errExit(2, errors.New("please supply a docker image name (only one)"))
+	}
+
+	if term.IsTerminal(os.Stdout.Fd()) {
+		errExit(2, errors.New("Cannot copy to a terminal"))
+	}
+
+	layer, err := repo.NewLayer(ctx.Args()[0], nil)
+	if err != nil {
+		errExit(2, err)
+	}
+
+	if err := layer.RestoreParent(); err != nil {
+		errExit(2, err)
+	}
+
+	docker, err := imgio.NewDocker(nil)
+	if err != nil {
+		errExit(2, err)
+	}
+
+	reader, err := docker.Export(layer)
+	if err != nil {
+		errExit(2, err)
+	}
+
+	bytes, err := io.Copy(os.Stdout, reader)
+	if err != nil {
+		errExit(2, err)
+	}
+
+	fmt.Fprintf(os.Stderr, "Wrote %d bytes to stdout\n", bytes)
 }
 
 func importImage(ctx *cli.Context) {
