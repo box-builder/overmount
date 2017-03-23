@@ -47,6 +47,16 @@ func main() {
 					Usage:  "list the layer IDs of an image",
 					Action: listLayers,
 				},
+				{
+					Name:   "mount",
+					Usage:  "perform an overlay mount on the image ID w/ children",
+					Action: mountImage,
+				},
+				{
+					Name:   "unmount",
+					Usage:  "Unmount a previously-mounted layer",
+					Action: unmountImage,
+				},
 			},
 		},
 	}
@@ -55,6 +65,67 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func constructImage(ctx *cli.Context) (*overmount.Image, *overmount.Layer) {
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	if err != nil {
+		errExit(2, err)
+	}
+
+	if len(ctx.Args()) != 1 {
+		errExit(2, errors.New("please supply a docker image name (only one)"))
+	}
+
+	layer, err := repo.NewLayer(ctx.Args()[0], nil)
+	if err != nil {
+		errExit(2, err)
+	} else if !layer.Exists() {
+		errExit(2, errors.New("Layer does not exist"))
+	}
+
+	if err := layer.RestoreParent(); err != nil {
+		errExit(2, err)
+	}
+
+	return repo.NewImage(layer), layer
+}
+
+func unmountImage(ctx *cli.Context) {
+	image, layer := constructImage(ctx)
+	if err := image.Unmount(); err != nil {
+		errExit(2, err)
+	}
+
+	fmt.Println(layer.MountPath())
+}
+
+func mountImage(ctx *cli.Context) {
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	if err != nil {
+		errExit(2, err)
+	}
+
+	if len(ctx.Args()) != 1 {
+		errExit(2, errors.New("please supply a docker image name (only one)"))
+	}
+
+	layer, err := repo.NewLayer(ctx.Args()[0], nil)
+	if err != nil {
+		errExit(2, err)
+	} else if !layer.Exists() {
+		errExit(2, errors.New("Layer does not exist"))
+	}
+
+	if err := layer.RestoreParent(); err != nil {
+		errExit(2, err)
+	}
+
+	if err := repo.NewImage(layer).Mount(); err != nil {
+		errExit(2, err)
+	}
+
+	fmt.Println(layer.MountPath())
 }
 
 func importImage(ctx *cli.Context) {

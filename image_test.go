@@ -14,7 +14,7 @@ func (m *mountSuite) TestImageMountUnmount(c *C) {
 	image2 := m.Repository.NewImage(layer.Parent) // only one layer
 	err := image2.Mount()
 	c.Assert(errors.Cause(err), Equals, ErrMountCannotProceed)
-	c.Assert(image2.Unmount(), Equals, ErrMountCannotProceed)
+	c.Assert(errors.Cause(image2.Unmount()), Equals, ErrMountCannotProceed)
 	c.Assert(image.Mount(), IsNil)
 	c.Assert(image.Unmount(), IsNil)
 }
