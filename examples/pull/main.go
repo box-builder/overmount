@@ -49,7 +49,7 @@ func main() {
 		panic(err)
 	}
 
-	reader, err := dockerClient.ImagePull(context.Background(), "docker.com/library/golang:latest", types.ImagePullOptions{})
+	reader, err := dockerClient.ImagePull(context.Background(), "docker.io/library/golang:latest", types.ImagePullOptions{})
 	if err != nil {
 		panic(err)
 	}

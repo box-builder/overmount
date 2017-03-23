@@ -128,12 +128,12 @@ func (m *mountSuite) TestImageUnpack(c *C) {
 	dockerClient, err := client.NewEnvClient()
 	c.Assert(err, IsNil)
 
-	reader, err := dockerClient.ImagePull(context.Background(), "docker.com/library/golang:latest", types.ImagePullOptions{})
+	reader, err := dockerClient.ImagePull(context.Background(), "docker.io/library/postgres:latest", types.ImagePullOptions{})
 	c.Assert(err, IsNil)
 	_, err = io.Copy(ioutil.Discard, reader)
 	c.Assert(err, IsNil)
 
-	reader, err = dockerClient.ImageSave(context.Background(), []string{"library/golang:latest"})
+	reader, err = dockerClient.ImageSave(context.Background(), []string{"library/postgres:latest"})
 	c.Assert(err, IsNil)
 
 	layerMap := map[string]string{}
@@ -184,15 +184,15 @@ func (m *mountSuite) TestImageUnpack(c *C) {
 
 	image := m.Repository.NewImage(parent)
 	c.Assert(image.Mount(), IsNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/go/bin/go"))
+	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/bin/docker-entrypoint.sh"))
 	c.Assert(err, IsNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/go/bin"))
+	_, err = os.Stat(path.Join(parent.MountPath(), "/var/lib/postgresql"))
 	c.Assert(err, IsNil)
 	_, err = os.Stat(path.Join(parent.MountPath(), "/etc/passwd"))
 	c.Assert(err, IsNil)
 	c.Assert(image.Unmount(), IsNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/go/bin/go"))
+	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/bin/docker-entrypoint.sh"))
 	c.Assert(err, NotNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/go/bin"))
+	_, err = os.Stat(path.Join(parent.MountPath(), "/etc/passwd"))
 	c.Assert(err, NotNil)
 }
