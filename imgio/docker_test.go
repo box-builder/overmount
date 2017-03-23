@@ -42,29 +42,37 @@ func (d *dockerSuite) SetUpTest(c *C) {
 }
 
 func (d *dockerSuite) TestDockerImport(c *C) {
-	reader, err := d.client.ImagePull(context.Background(), "docker.com/library/golang:latest", types.ImagePullOptions{})
-	c.Assert(err, IsNil)
-	_, err = io.Copy(ioutil.Discard, reader)
-	c.Assert(err, IsNil)
-
-	reader, err = d.client.ImageSave(context.Background(), []string{"golang:latest"})
-	c.Assert(err, IsNil)
-	docker, err := NewDocker(d.client)
-	c.Assert(err, IsNil)
-	layer, err := docker.Import(d.repository, reader)
-	c.Assert(err, IsNil)
-	c.Assert(layer, NotNil)
-	config, err := layer.Config()
-	c.Assert(err, IsNil)
-	c.Assert(config.WorkingDir, Equals, "/go")
-
-	inspect, _, err := d.client.ImageInspectWithRaw(context.Background(), "golang:latest")
-	c.Assert(err, IsNil)
-
-	var count int
-	for iter := layer; iter != nil; iter = iter.Parent {
-		count++
+	images := map[string][]string{
+		"golang:latest":   []string{"/bin/bash"},
+		"alpine:latest":   nil,
+		"postgres:latest": []string{"postgres"},
 	}
 
-	c.Assert(count, Equals, len(inspect.RootFS.Layers))
+	for imageName, cmd := range images {
+		reader, err := d.client.ImagePull(context.Background(), "docker.io/library/"+imageName, types.ImagePullOptions{})
+		c.Assert(err, IsNil, Commentf("%v", imageName))
+		_, err = io.Copy(ioutil.Discard, reader)
+		c.Assert(err, IsNil, Commentf("%v", imageName))
+
+		reader, err = d.client.ImageSave(context.Background(), []string{imageName})
+		c.Assert(err, IsNil, Commentf("%v", imageName))
+		docker, err := NewDocker(d.client)
+		c.Assert(err, IsNil, Commentf("%v", imageName))
+		layer, err := docker.Import(d.repository, reader)
+		c.Assert(err, IsNil, Commentf("%v", imageName))
+		c.Assert(layer, NotNil, Commentf("%v", imageName))
+		config, err := layer.Config()
+		c.Assert(err, IsNil, Commentf("%v", imageName))
+		c.Assert(config.Cmd, DeepEquals, cmd, Commentf("%v", imageName))
+
+		inspect, _, err := d.client.ImageInspectWithRaw(context.Background(), imageName)
+		c.Assert(err, IsNil)
+
+		var count int
+		for iter := layer; iter != nil; iter = iter.Parent {
+			count++
+		}
+
+		c.Assert(count, Equals, len(inspect.RootFS.Layers))
+	}
 }

@@ -75,19 +75,19 @@ func (d *Docker) Import(r *om.Repository, reader io.ReadCloser) (*om.Layer, erro
 func (d *Docker) constructImage(up *unpackedImage) (*om.Layer, error) {
 	digestMap := map[digest.Digest]*om.Layer{}
 
-	for layerID, parentID := range up.layerParentMap {
+	for layerID, filename := range up.layerFileMap {
 		layer, ok := up.layers[layerID]
 		if !ok {
 			return nil, errors.Errorf("invalid layer id %v", layerID)
 		}
 
-		f, err := os.Open(up.layerFileMap[layerID])
+		f, err := os.Open(filename)
 		if err != nil {
 			return nil, err
 		}
 
 		defer f.Close()
-		layer.Parent = up.layers[parentID]
+		layer.Parent = up.layers[up.layerParentMap[layerID]]
 
 		var dg digest.Digest
 
