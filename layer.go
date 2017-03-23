@@ -37,8 +37,9 @@ func (r *Repository) newLayer(id string, parent *Layer, create bool) (*Layer, er
 	var err error
 
 	layer := &Layer{
+		Parent: parent,
+
 		id:         id,
-		parent:     parent,
 		repository: r,
 		editMutex:  new(sync.Mutex),
 	}
@@ -68,11 +69,6 @@ func (l *Layer) edit(editFunc func() error) (retErr error) {
 // ID returns the ID of the layer.
 func (l *Layer) ID() string {
 	return l.id
-}
-
-// Parent returns the parent layer.
-func (l *Layer) Parent() *Layer {
-	return l.parent
 }
 
 // MountPath gets the mount path for a given subpath.
@@ -131,7 +127,7 @@ func (l *Layer) SaveConfig(config *v1.ImageConfig) error {
 // SaveParent will silently only save the
 func (l *Layer) SaveParent() error {
 	return l.edit(func() error {
-		if l.parent == nil {
+		if l.Parent == nil {
 			return nil
 		}
 
@@ -151,11 +147,11 @@ func (l *Layer) SaveParent() error {
 
 // OverwriteParent overwrites the parent setting for this layer.
 func (l *Layer) overwriteParent() error {
-	if l.parent == nil {
+	if l.Parent == nil {
 		return nil
 	}
 
-	return ioutil.WriteFile(l.parentPath(), []byte(l.parent.ID()), 0600)
+	return ioutil.WriteFile(l.parentPath(), []byte(l.Parent.ID()), 0600)
 }
 
 // LoadParent loads only the parent for this specific instance. See
@@ -183,7 +179,7 @@ func (l *Layer) LoadParent() error {
 		return errors.Wrap(ErrInvalidLayer, parent.layerBase())
 	}
 
-	l.parent = parent
+	l.Parent = parent
 
 	return nil
 }
@@ -194,8 +190,8 @@ func (l *Layer) RestoreParent() error {
 		return err
 	}
 
-	if l.parent != nil {
-		return l.parent.RestoreParent()
+	if l.Parent != nil {
+		return l.Parent.RestoreParent()
 	}
 
 	return nil

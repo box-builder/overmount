@@ -12,6 +12,7 @@
 package overmount
 
 import (
+	"io"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -99,8 +100,9 @@ type Mount struct {
 // See https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt for
 // more information on mount flags.
 type Layer struct {
+	Parent *Layer
+
 	id         string
-	parent     *Layer
 	asset      *Asset
 	repository *Repository
 
@@ -112,4 +114,13 @@ type Image struct {
 	repository *Repository
 	layer      *Layer
 	mount      *Mount
+}
+
+// Importer is an interface to image importers; ways to get images into
+// overmount repositories.
+type Importer interface {
+	// Import takes a tar represented as an io.Reader, and converts and unpacks
+	// it into the overmount repository.  Returns the top-most layer and any
+	// error.
+	Import(*Repository, io.Reader) (*Layer, error)
 }
