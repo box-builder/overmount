@@ -64,7 +64,7 @@ func listLayers(ctx *cli.Context) {
 		}
 
 		var depth int
-		for iter := layer; iter != nil; iter = iter.Parent() {
+		for iter := layer; iter != nil; iter = iter.Parent {
 			fmt.Printf("(depth %d): %v\n", depth, iter.ID())
 			depth++
 		}

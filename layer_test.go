@@ -43,14 +43,14 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 
 	_, layer := m.makeImage(c, layerCount)
 
-	for iter := layer; iter != nil; iter = iter.Parent() {
+	for iter := layer; iter != nil; iter = iter.Parent {
 		c.Assert(iter.SaveParent(), IsNil)
 		c.Assert(iter.SaveParent(), IsNil) // double save should have no error
 	}
 
 	var err error
 
-	parentID := layer.Parent().ID()
+	parentID := layer.Parent.ID()
 	id := layer.ID()
 	m.Repository, err = NewRepository(m.Repository.baseDir)
 	c.Assert(err, IsNil)
@@ -59,7 +59,7 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 	c.Assert(layer.RestoreParent(), IsNil)
 
 	var count int
-	for iter := layer; iter != nil; iter = iter.Parent() {
+	for iter := layer; iter != nil; iter = iter.Parent {
 		count++
 	}
 
@@ -67,10 +67,10 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 	m.Repository, err = NewRepository(m.Repository.baseDir)
 	c.Assert(err, IsNil)
 	layer, err = m.Repository.NewLayer(id, nil)
-	layer.parent = nil
+	layer.Parent = nil
 	c.Assert(layer.LoadParent(), IsNil)
-	c.Assert(layer.parent, NotNil)
-	c.Assert(layer.parent.ID(), Equals, parentID)
+	c.Assert(layer.Parent, NotNil)
+	c.Assert(layer.Parent.ID(), Equals, parentID)
 }
 
 func (m *mountSuite) TestLayerConfig(c *C) {

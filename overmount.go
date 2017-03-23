@@ -12,6 +12,7 @@
 package overmount
 
 import (
+	"io"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -99,8 +100,9 @@ type Mount struct {
 // See https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt for
 // more information on mount flags.
 type Layer struct {
+	Parent *Layer
+
 	id         string
-	parent     *Layer
 	asset      *Asset
 	repository *Repository
 
