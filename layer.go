@@ -44,7 +44,7 @@ func (r *Repository) newLayer(id string, parent *Layer, create bool) (*Layer, er
 		editMutex:  new(sync.Mutex),
 	}
 
-	if create {
+	if create && !layer.Exists() {
 		if err := layer.Create(); err != nil {
 			return layer, err // return the layer here (document later) in case they need to clean it up.
 		}
@@ -185,10 +185,10 @@ func (l *Layer) LoadParent() error {
 	}
 
 	parent, err := l.repository.NewLayer(string(id), nil)
-	if err != nil && err != ErrLayerExists {
-		return err
-	} else if err == ErrLayerExists {
+	if err == ErrLayerExists {
 		parent = l.repository.layers[string(id)]
+	} else if err != nil {
+		return err
 	}
 
 	fi, err := os.Stat(parent.layerBase())

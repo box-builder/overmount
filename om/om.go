@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 
 	"github.com/docker/docker/client"
 	"github.com/erikh/overmount"
@@ -27,7 +28,7 @@ func main() {
 			Name:   "repo, r",
 			Usage:  "overmount repository to use",
 			EnvVar: "OVERMOUNT_REPO",
-			Value:  "~/.overmount",
+			Value:  path.Join(os.Getenv("HOME"), ".overmount"),
 		},
 	}
 

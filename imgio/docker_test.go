@@ -49,7 +49,7 @@ func (d *dockerSuite) TestDockerImport(c *C) {
 
 	reader, err = d.client.ImageSave(context.Background(), []string{"golang:latest"})
 	c.Assert(err, IsNil)
-	docker, err := NewDocker(nil)
+	docker, err := NewDocker(d.client)
 	c.Assert(err, IsNil)
 	layer, err := docker.Import(d.repository, reader)
 	c.Assert(err, IsNil)
