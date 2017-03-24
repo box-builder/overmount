@@ -9,7 +9,7 @@ import (
 	"os"
 	"path"
 
-	om "github.com/erikh/overmount"
+	om "github.com/box-builder/overmount"
 	"github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
