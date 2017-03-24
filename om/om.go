@@ -201,12 +201,14 @@ func importImage(ctx *cli.Context) {
 		errExit(2, err)
 	}
 
-	layer, err := docker.Import(repo, reader)
+	layers, err := docker.Import(repo, reader)
 	if err != nil {
 		errExit(2, err)
 	}
 
-	fmt.Println(layer.ID())
+	for _, layer := range layers {
+		fmt.Println(layer.ID())
+	}
 }
 
 func listLayers(ctx *cli.Context) {

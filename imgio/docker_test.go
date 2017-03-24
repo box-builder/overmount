@@ -43,9 +43,9 @@ func (d *dockerSuite) SetUpTest(c *C) {
 
 func (d *dockerSuite) TestDockerImport(c *C) {
 	images := map[string][]string{
-		"golang:latest":   []string{"/bin/bash"},
-		"alpine:latest":   nil,
-		"postgres:latest": []string{"postgres"},
+		"golang":          []string{"/bin/bash"}, // should have two images
+		"alpine:latest":   nil,                   // squashed image, single layer
+		"postgres:latest": []string{"postgres"},  // just a fatty
 	}
 
 	for imageName, cmd := range images {
@@ -58,21 +58,21 @@ func (d *dockerSuite) TestDockerImport(c *C) {
 		c.Assert(err, IsNil, Commentf("%v", imageName))
 		docker, err := NewDocker(d.client)
 		c.Assert(err, IsNil, Commentf("%v", imageName))
-		layer, err := docker.Import(d.repository, reader)
+		layers, err := docker.Import(d.repository, reader)
 		c.Assert(err, IsNil, Commentf("%v", imageName))
-		c.Assert(layer, NotNil, Commentf("%v", imageName))
-		config, err := layer.Config()
-		c.Assert(err, IsNil, Commentf("%v", imageName))
-		c.Assert(config.Cmd, DeepEquals, cmd, Commentf("%v", imageName))
+		c.Assert(layers, NotNil, Commentf("%v", imageName))
 
-		inspect, _, err := d.client.ImageInspectWithRaw(context.Background(), imageName)
-		c.Assert(err, IsNil)
+		for _, layer := range layers {
+			config, err := layer.Config()
+			c.Assert(err, IsNil, Commentf("%v", imageName))
+			c.Assert(config.Config.Cmd, DeepEquals, cmd, Commentf("%v", imageName))
 
-		var count int
-		for iter := layer; iter != nil; iter = iter.Parent {
-			count++
+			var count int
+			for iter := layer; iter != nil; iter = iter.Parent {
+				count++
+			}
+
+			c.Assert(count, Equals, len(config.RootFS.DiffIDs))
 		}
-
-		c.Assert(count, Equals, len(inspect.RootFS.Layers))
 	}
 }

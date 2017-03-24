@@ -115,19 +115,19 @@ func (l *Layer) configPath() string {
 }
 
 // Config returns a reference to the image configuration for this layer.
-func (l *Layer) Config() (*v1.ImageConfig, error) {
+func (l *Layer) Config() (*v1.Image, error) {
 	f, err := os.Open(l.configPath())
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	var i v1.ImageConfig
+	var i v1.Image
 	return &i, json.NewDecoder(f).Decode(&i)
 }
 
 // SaveConfig writes a *v1.Image configuration to the repository for the layer.
-func (l *Layer) SaveConfig(config *v1.ImageConfig) error {
+func (l *Layer) SaveConfig(config *v1.Image) error {
 	return l.edit(func() error {
 		f, err := os.Create(l.configPath())
 		if err != nil {

@@ -18,7 +18,7 @@ import (
 
 type unpackedImage struct {
 	tempdir        string
-	image          *v1.Image
+	images         []*v1.Image
 	layers         map[string]*om.Layer
 	layerFileMap   map[string]string
 	layerParentMap map[string]string
@@ -27,7 +27,7 @@ type unpackedImage struct {
 // Import takes a tar represented as an io.Reader, and converts and unpacks
 // it into the overmount repository.  Returns the top-most layer and any
 // error.
-func (d *Docker) Import(r *om.Repository, reader io.ReadCloser) (*om.Layer, error) {
+func (d *Docker) Import(r *om.Repository, reader io.ReadCloser) ([]*om.Layer, error) {
 	tempdir, err := ioutil.TempDir("", "overmount-unpack-")
 	if err != nil {
 		return nil, err
@@ -49,7 +49,8 @@ func (d *Docker) Import(r *om.Repository, reader io.ReadCloser) (*om.Layer, erro
 	return d.constructImage(up)
 }
 
-func (d *Docker) constructImage(up *unpackedImage) (*om.Layer, error) {
+func (d *Docker) constructImage(up *unpackedImage) ([]*om.Layer, error) {
+	layers := []*om.Layer{}
 	digestMap := map[digest.Digest]*om.Layer{}
 
 	for layerID, filename := range up.layerFileMap {
@@ -80,13 +81,21 @@ func (d *Docker) constructImage(up *unpackedImage) (*om.Layer, error) {
 		digestMap[dg] = layer
 	}
 
-	topLayer := digest.Digest(up.image.RootFS.DiffIDs[len(up.image.RootFS.DiffIDs)-1])
-	top, ok := digestMap[topLayer]
-	if !ok {
-		return nil, errors.New("top layer doesn't appear to exist")
+	for _, image := range up.images {
+		topLayer := digest.Digest(image.RootFS.DiffIDs[len(image.RootFS.DiffIDs)-1])
+		top, ok := digestMap[topLayer]
+		if !ok {
+			return nil, errors.New("top layer doesn't appear to exist")
+		}
+
+		if err := top.SaveConfig(image); err != nil {
+			return nil, err
+		}
+
+		layers = append(layers, top)
 	}
 
-	return top, top.SaveConfig(&up.image.Config)
+	return layers, nil
 }
 
 func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage, error) {
@@ -95,7 +104,7 @@ func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage,
 		layerFileMap:   map[string]string{},
 		layerParentMap: map[string]string{},
 		layers:         map[string]*om.Layer{},
-		image:          &v1.Image{},
+		images:         []*v1.Image{},
 	}
 
 	err := filepath.Walk(tempdir, func(p string, fi os.FileInfo, err error) error {
@@ -143,9 +152,13 @@ func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage,
 				return err
 			}
 
-			if err := json.Unmarshal(content, up.image); err != nil {
+			image := &v1.Image{}
+
+			if err := json.Unmarshal(content, image); err != nil {
 				return err
 			}
+
+			up.images = append(up.images, image)
 		}
 		return nil
 	})
