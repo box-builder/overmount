@@ -15,8 +15,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	"github.com/erikh/overmount"
-	"github.com/erikh/overmount/imgio"
+	"github.com/box-builder/overmount"
+	"github.com/box-builder/overmount/imgio"
 )
 
 func main() {

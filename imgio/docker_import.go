@@ -13,7 +13,7 @@ import (
 	"github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 
-	om "github.com/erikh/overmount"
+	om "github.com/box-builder/overmount"
 )
 
 type unpackedImage struct {

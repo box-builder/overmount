@@ -10,7 +10,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	om "github.com/erikh/overmount"
+	om "github.com/box-builder/overmount"
 )
 
 type dockerSuite struct {

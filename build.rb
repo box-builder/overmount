@@ -1,6 +1,6 @@
 from "golang"
 
-remotepath = "/go/src/github.com/erikh/overmount"
+remotepath = "/go/src/github.com/box-builder/overmount"
 
 copy ".", remotepath
 

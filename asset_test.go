@@ -25,7 +25,7 @@ func (m *mountSuite) TestAssetBasic(c *C) {
 		c.Assert(asset.Path(), Equals, dir)
 		c.Assert(asset.Digest(), Equals, emptyDigest)
 
-		reader, err := archive.Tar("/go/src/github.com/erikh/overmount", archive.Uncompressed)
+		reader, err := archive.Tar("/go/src/github.com/box-builder/overmount", archive.Uncompressed)
 		c.Assert(err, IsNil)
 		c.Assert(asset.Unpack(reader), check)
 		dg := asset.Digest()
