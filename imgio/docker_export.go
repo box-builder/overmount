@@ -2,12 +2,15 @@ package imgio
 
 import (
 	"archive/tar"
+	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
 
 	om "github.com/erikh/overmount"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -38,7 +41,11 @@ func (d *Docker) Export(layer *om.Layer) (io.ReadCloser, error) {
 			}
 		}()
 
+		layerIDs := []string{}
+
 		for iter := layer; iter != nil; iter = iter.Parent {
+			layerIDs = append(layerIDs, iter.ID())
+
 			err := tw.WriteHeader(&tar.Header{
 				Name:     iter.ID(),
 				Mode:     0700,
@@ -73,6 +80,37 @@ func (d *Docker) Export(layer *om.Layer) (io.ReadCloser, error) {
 				return
 			}
 
+			var parent string
+			if iter.Parent != nil {
+				parent = iter.Parent.ID()
+			}
+
+			content, err := json.Marshal(map[string]interface{}{
+				"id":     iter.ID(),
+				"parent": parent,
+				"config": v1.ImageConfig{},
+			})
+			if err != nil {
+				w.CloseWithError(err)
+				return
+			}
+
+			err = tw.WriteHeader(&tar.Header{
+				Name:     path.Join(iter.ID(), "json"),
+				Mode:     0600,
+				Typeflag: tar.TypeReg,
+				Size:     int64(len(content)),
+			})
+			if err != nil {
+				w.CloseWithError(err)
+				return
+			}
+
+			if _, err := tw.Write(content); err != nil {
+				w.CloseWithError(err)
+				return
+			}
+
 			err = tw.WriteHeader(&tar.Header{
 				Name:     path.Join(iter.ID(), "layer.tar"),
 				Mode:     0600,
@@ -90,6 +128,78 @@ func (d *Docker) Export(layer *om.Layer) (io.ReadCloser, error) {
 				return
 			}
 		}
+
+		content, err := json.Marshal(map[string]interface{}{})
+		if err != nil {
+			w.CloseWithError(err)
+			return
+		}
+
+		err = tw.WriteHeader(&tar.Header{
+			Name:     "repositories",
+			Mode:     0600,
+			Typeflag: tar.TypeReg,
+			Size:     int64(len(content)),
+		})
+		if err != nil {
+			w.CloseWithError(err)
+			return
+		}
+
+		if _, err := tw.Write(content); err != nil {
+			w.CloseWithError(err)
+			return
+		}
+
+		content, err = json.Marshal([]map[string]interface{}{
+			{
+				"Config":   fmt.Sprintf("%s.json", layer.ID()),
+				"RepoTags": []string{},
+				"Layers":   layerIDs,
+			},
+		})
+		if err != nil {
+			w.CloseWithError(err)
+			return
+		}
+
+		err = tw.WriteHeader(&tar.Header{
+			Name:     "manifest.json",
+			Mode:     0600,
+			Typeflag: tar.TypeReg,
+			Size:     int64(len(content)),
+		})
+		if err != nil {
+			w.CloseWithError(err)
+			return
+		}
+
+		if _, err := tw.Write(content); err != nil {
+			w.CloseWithError(err)
+			return
+		}
+		content, err = json.Marshal(config)
+		if err != nil {
+			w.CloseWithError(err)
+			return
+		}
+
+		err = tw.WriteHeader(&tar.Header{
+			Name:     fmt.Sprintf("%s.json", layer.ID()),
+			Mode:     0600,
+			Typeflag: tar.TypeReg,
+			Size:     int64(len(content)),
+		})
+		if err != nil {
+			w.CloseWithError(err)
+			return
+		}
+
+		if _, err := tw.Write(content); err != nil {
+			w.CloseWithError(err)
+			return
+		}
+
 		if err := tw.Close(); err != nil {
 			w.CloseWithError(err)
 			return
