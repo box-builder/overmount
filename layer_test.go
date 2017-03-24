@@ -78,8 +78,8 @@ func (m *mountSuite) TestLayerConfig(c *C) {
 	config, err := layer.Config()
 	c.Assert(config, IsNil)
 	c.Assert(err, NotNil)
-	c.Assert(layer.SaveConfig(&v1.ImageConfig{Cmd: []string{"quux"}}), IsNil)
+	c.Assert(layer.SaveConfig(&v1.Image{Config: v1.ImageConfig{Cmd: []string{"quux"}}}), IsNil)
 	config, err = layer.Config()
 	c.Assert(err, IsNil)
-	c.Assert(config.Cmd, DeepEquals, []string{"quux"})
+	c.Assert(config.Config.Cmd, DeepEquals, []string{"quux"})
 }
