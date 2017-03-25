@@ -4,13 +4,14 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"os"
 	. "testing"
 
 	. "gopkg.in/check.v1"
 
+	om "github.com/box-builder/overmount"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
-	om "github.com/box-builder/overmount"
 )
 
 type dockerSuite struct {
@@ -41,12 +42,15 @@ func (d *dockerSuite) SetUpTest(c *C) {
 	}
 }
 
-func (d *dockerSuite) TestDockerImport(c *C) {
+func (d *dockerSuite) TestDockerImportExport(c *C) {
 	images := map[string][]string{
 		"golang":          []string{"/bin/bash"}, // should have two images
 		"alpine:latest":   nil,                   // squashed image, single layer
 		"postgres:latest": []string{"postgres"},  // just a fatty
 	}
+
+	docker, err := NewDocker(d.client)
+	c.Assert(err, IsNil)
 
 	for imageName, cmd := range images {
 		reader, err := d.client.ImagePull(context.Background(), "docker.io/library/"+imageName, types.ImagePullOptions{})
@@ -55,8 +59,6 @@ func (d *dockerSuite) TestDockerImport(c *C) {
 		c.Assert(err, IsNil, Commentf("%v", imageName))
 
 		reader, err = d.client.ImageSave(context.Background(), []string{imageName})
-		c.Assert(err, IsNil, Commentf("%v", imageName))
-		docker, err := NewDocker(d.client)
 		c.Assert(err, IsNil, Commentf("%v", imageName))
 		layers, err := docker.Import(d.repository, reader)
 		c.Assert(err, IsNil, Commentf("%v", imageName))
@@ -73,6 +75,14 @@ func (d *dockerSuite) TestDockerImport(c *C) {
 			}
 
 			c.Assert(count, Equals, len(config.RootFS.DiffIDs))
+
+			reader, err = d.repository.Export(docker, layer)
+			c.Assert(err, IsNil, Commentf("%v", imageName))
+			resp, err := d.client.ImageLoad(context.Background(), reader, false)
+			c.Assert(err, IsNil, Commentf("%v", imageName))
+			_, err = io.Copy(os.Stdout, resp.Body)
+			c.Assert(err, IsNil, Commentf("%v", imageName))
 		}
+
 	}
 }
