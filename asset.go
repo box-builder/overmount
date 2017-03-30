@@ -61,7 +61,7 @@ func (a *Asset) Unpack(reader io.Reader) error {
 	}
 
 	// FIXME there's probably a double-unarchive bug here.
-	err := archive.Unpack(io.TeeReader(reader, a.digest.Hash()), a.path, &archive.TarOptions{WhiteoutFormat: archive.OverlayWhiteoutFormat})
+	err := archive.Unpack(io.TeeReader(reader, a.digest.Hash()), a.path, &archive.TarOptions{})
 	if err != nil {
 		return err
 	}
@@ -78,7 +78,7 @@ func (a *Asset) Pack(writer io.Writer) error {
 		return err
 	}
 
-	reader, err := archive.Tar(a.path, archive.Uncompressed)
+	reader, err := archive.TarWithOptions(a.path, &archive.TarOptions{})
 	if err != nil {
 		return err
 	}
