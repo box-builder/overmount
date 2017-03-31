@@ -10,6 +10,9 @@ import (
 	"path"
 
 	om "github.com/box-builder/overmount"
+	"github.com/box-builder/overmount/configmap"
+	"github.com/docker/docker/image"
+	dl "github.com/docker/docker/layer"
 	digest "github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
@@ -243,10 +246,26 @@ func writeImageConfig(chainID digest.Digest, diffIDs []digest.Digest, layer *om.
 		return errors.Wrap(om.ErrImageCannotBeComposed, "missing image configuration")
 	}
 
-	config.RootFS.DiffIDs = diffIDs
-	config.History = nil
+	img, err := configmap.ToDockerV1(config)
+	if err != nil {
+		return errors.Wrap(om.ErrInvalidLayer, err.Error())
+	}
 
-	content, err := json.Marshal(config)
+	dids := []dl.DiffID{}
+	for _, diff := range diffIDs {
+		dids = append(dids, dl.DiffID(diff))
+	}
+
+	outerConfig := image.Image{
+		V1Image: *img,
+		RootFS: &image.RootFS{
+			Type:    "layers",
+			DiffIDs: dids,
+		},
+		Parent: image.ID(config.Parent),
+	}
+
+	content, err := json.Marshal(outerConfig)
 	if err != nil {
 		return err
 	}

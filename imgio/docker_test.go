@@ -67,14 +67,7 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 		for _, layer := range layers {
 			config, err := layer.Config()
 			c.Assert(err, IsNil, Commentf("%v", imageName))
-			c.Assert(config.Config.Cmd, DeepEquals, cmd, Commentf("%v", imageName))
-
-			var count int
-			for iter := layer; iter != nil; iter = iter.Parent {
-				count++
-			}
-
-			c.Assert(count, Equals, len(config.RootFS.DiffIDs))
+			c.Assert(config.Cmd, DeepEquals, cmd, Commentf("%v", imageName))
 
 			reader, err = d.repository.Export(docker, layer)
 			c.Assert(err, IsNil, Commentf("%v", imageName))
