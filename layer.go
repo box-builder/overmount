@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	digest "github.com/opencontainers/go-digest"
-	"github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 )
 
@@ -115,19 +114,19 @@ func (l *Layer) configPath() string {
 }
 
 // Config returns a reference to the image configuration for this layer.
-func (l *Layer) Config() (*v1.Image, error) {
+func (l *Layer) Config() (*ImageConfig, error) {
 	f, err := os.Open(l.configPath())
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	var i v1.Image
+	var i ImageConfig
 	return &i, json.NewDecoder(f).Decode(&i)
 }
 
 // SaveConfig writes a *v1.Image configuration to the repository for the layer.
-func (l *Layer) SaveConfig(config *v1.Image) error {
+func (l *Layer) SaveConfig(config *ImageConfig) error {
 	return l.edit(func() error {
 		f, err := os.Create(l.configPath())
 		if err != nil {

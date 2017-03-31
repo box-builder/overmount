@@ -8,17 +8,18 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/docker/docker/image"
 	"github.com/docker/docker/pkg/archive"
 	digest "github.com/opencontainers/go-digest"
-	"github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/pkg/errors"
 
 	om "github.com/box-builder/overmount"
+	"github.com/box-builder/overmount/configmap"
 )
 
 type unpackedImage struct {
 	tempdir        string
-	images         []*v1.Image
+	images         []*image.Image
 	layers         map[string]*om.Layer
 	layerFileMap   map[string]string
 	layerParentMap map[string]string
@@ -81,14 +82,14 @@ func (d *Docker) constructImage(up *unpackedImage) ([]*om.Layer, error) {
 		digestMap[dg] = layer
 	}
 
-	for _, image := range up.images {
-		topLayer := digest.Digest(image.RootFS.DiffIDs[len(image.RootFS.DiffIDs)-1])
+	for _, img := range up.images {
+		topLayer := digest.Digest(img.RootFS.DiffIDs[len(img.RootFS.DiffIDs)-1])
 		top, ok := digestMap[topLayer]
 		if !ok {
 			return nil, errors.New("top layer doesn't appear to exist")
 		}
 
-		if err := top.SaveConfig(image); err != nil {
+		if err := top.SaveConfig(configmap.FromDockerV1(&img.V1Image)); err != nil {
 			return nil, err
 		}
 
@@ -104,7 +105,7 @@ func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage,
 		layerFileMap:   map[string]string{},
 		layerParentMap: map[string]string{},
 		layers:         map[string]*om.Layer{},
-		images:         []*v1.Image{},
+		images:         []*image.Image{},
 	}
 
 	err := filepath.Walk(tempdir, func(p string, fi os.FileInfo, err error) error {
@@ -152,13 +153,13 @@ func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage,
 				return err
 			}
 
-			image := &v1.Image{}
+			img := &image.Image{}
 
-			if err := json.Unmarshal(content, image); err != nil {
+			if err := json.Unmarshal(content, img); err != nil {
 				return err
 			}
 
-			up.images = append(up.images, image)
+			up.images = append(up.images, img)
 		}
 		return nil
 	})
