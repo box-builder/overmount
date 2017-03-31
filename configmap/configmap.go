@@ -70,16 +70,6 @@ func FromDockerV1(img *image.V1Image) *overmount.ImageConfig {
 	}
 }
 
-// FromOCIV1 converts an oci image configuration to an overmount one.
-func FromOCIV1(img *v1.Image) *overmount.ImageConfig {
-	return nil
-}
-
-// ToOCIV1 converts an overmount image configuration to an OCI one.
-func ToOCIV1(config *overmount.ImageConfig) *v1.Image {
-	return nil
-}
-
 // ToDockerV1 converts an overmount image configuration to a docker one.
 func ToDockerV1(config *overmount.ImageConfig) (*image.V1Image, error) {
 	cc, err := remarshalContainerConfig(config.ContainerConfig)
@@ -110,4 +100,30 @@ func ToDockerV1(config *overmount.ImageConfig) (*image.V1Image, error) {
 			StopSignal:   config.StopSignal,
 		},
 	}, nil
+}
+
+// FromOCIV1 converts an oci image configuration to an overmount one.
+func FromOCIV1(img *v1.Image) *overmount.ImageConfig {
+	return nil
+}
+
+// ToOCIV1 converts an overmount image configuration to an OCI one.
+func ToOCIV1(config *overmount.ImageConfig) *v1.Image {
+	return &v1.Image{
+		Created:      config.Created,
+		Author:       config.Author,
+		Architecture: config.Architecture,
+		OS:           config.OS,
+		Config: v1.ImageConfig{
+			User:         config.User,
+			ExposedPorts: config.ExposedPorts,
+			Env:          config.Env,
+			Entrypoint:   config.Entrypoint,
+			Cmd:          config.Cmd,
+			Volumes:      config.Volumes,
+			WorkingDir:   config.WorkingDir,
+			Labels:       config.Labels,
+			StopSignal:   config.StopSignal,
+		},
+	}
 }
