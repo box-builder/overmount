@@ -8,10 +8,10 @@ import (
 	"os"
 	"path"
 
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/term"
 	"github.com/box-builder/overmount"
 	"github.com/box-builder/overmount/imgio"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/term"
 	"github.com/urfave/cli"
 )
 
@@ -48,6 +48,13 @@ func main() {
 					Name:   "export",
 					Usage:  "export a docker image to stdout",
 					Action: exportImage,
+					Flags: []cli.Flag{
+						cli.StringFlag{
+							Name:  "type",
+							Value: "docker",
+							Usage: "Set the type of image to export [docker|oci]",
+						},
+					},
 				},
 				{
 					Name:   "list-layers",
@@ -158,12 +165,19 @@ func exportImage(ctx *cli.Context) {
 		errExit(2, err)
 	}
 
-	docker, err := imgio.NewDocker(nil)
-	if err != nil {
-		errExit(2, err)
+	var exporter overmount.Exporter
+
+	switch ctx.String("type") {
+	case "docker":
+		exporter, err = imgio.NewDocker(nil)
+		if err != nil {
+			errExit(2, err)
+		}
+	case "oci":
+		exporter = imgio.NewOCI()
 	}
 
-	reader, err := docker.Export(layer)
+	reader, err := exporter.Export(layer)
 	if err != nil {
 		errExit(2, err)
 	}

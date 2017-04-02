@@ -25,12 +25,12 @@ func (d *Docker) Export(layer *om.Layer) (io.ReadCloser, error) {
 	}
 
 	r, w := io.Pipe()
-	go writeTar(layer, w)
+	go d.writeTar(layer, w)
 
 	return r, nil
 }
 
-func writeTar(layer *om.Layer, w *io.PipeWriter) (retErr error) {
+func (d *Docker) writeTar(layer *om.Layer, w *io.PipeWriter) (retErr error) {
 	defer func() {
 		if retErr == nil {
 			w.Close()
@@ -40,42 +40,46 @@ func writeTar(layer *om.Layer, w *io.PipeWriter) (retErr error) {
 	}()
 
 	tw := tar.NewWriter(w)
-	layers := []*om.Layer{}
-	chainIDs := []digest.Digest{}
-	diffIDs := []digest.Digest{}
 
-	var parent digest.Digest
-
-	// we need to walk it from the root up; so we need to reverse the list.
-	for iter := layer; iter != nil; iter = iter.Parent {
-		layers = append(layers, iter)
-	}
-
-	for i := len(layers) - 1; i >= 0; i-- {
-		iter := layers[i]
-		chainID, diffID, err := packLayer(parent, iter, tw)
+	chainIDs, diffIDs, _, _, err := runChain(layer, tw, func(parent digest.Digest, iter *om.Layer, tw *tar.Writer) (digest.Digest, digest.Digest, int64, error) {
+		tf, err := ioutil.TempFile("", "overmount-pack-")
 		if err != nil {
-			return err
+			return "", "", 0, err
 		}
 
-		chainIDs = append(chainIDs, chainID)
-		diffIDs = append(diffIDs, diffID)
+		defer func() {
+			tf.Close()
+			os.Remove(tf.Name())
+		}()
 
-		if err := writeLayerConfig(chainID, parent, iter, tw); err != nil {
-			return err
+		chainID, diffID, err := calcLayer(parent, iter, tf)
+		if err != nil {
+			return "", "", 0, err
 		}
-		parent = chainID
-	}
 
-	if err := writeRepositories(tw); err != nil {
+		if err := d.packLayer(chainID, tf, tw); err != nil {
+			return "", "", 0, err
+		}
+
+		if err := d.writeLayerConfig(chainID, parent, iter, tw); err != nil {
+			return "", "", 0, err
+		}
+
+		return chainID, diffID, 0, nil
+	})
+	if err != nil {
 		return err
 	}
 
-	if err := writeManifest(layer, chainIDs, tw); err != nil {
+	if err := d.writeRepositories(tw); err != nil {
 		return err
 	}
 
-	if err := writeImageConfig(chainIDs[len(chainIDs)-1], diffIDs, layer, tw); err != nil {
+	if err := d.writeManifest(layer, chainIDs, tw); err != nil {
+		return err
+	}
+
+	if err := d.writeImageConfig(chainIDs[len(chainIDs)-1], diffIDs, layer, tw); err != nil {
 		return err
 	}
 
@@ -88,45 +92,23 @@ func writeTar(layer *om.Layer, w *io.PipeWriter) (retErr error) {
 	return nil
 }
 
-func packLayer(parentDigest digest.Digest, iter *om.Layer, tw *tar.Writer) (digest.Digest, digest.Digest, error) {
-	tf, err := ioutil.TempFile("", "layer-")
-	if err != nil {
-		return "", "", err
-	}
-
-	defer func() {
-		tf.Close()
-		os.Remove(tf.Name())
-	}()
-
-	packDigest, err := iter.Pack(tf)
-	if err != nil {
-		return "", "", err
-	}
-
-	hexDigest := ""
-	if parentDigest != "" {
-		hexDigest = parentDigest.Hex()
-	}
-
-	chainID := digest.FromBytes([]byte(string(hexDigest) + " " + string(packDigest.Hex())))
-
-	err = tw.WriteHeader(&tar.Header{
+func (d *Docker) packLayer(chainID digest.Digest, tf *os.File, tw *tar.Writer) error {
+	err := tw.WriteHeader(&tar.Header{
 		Name:     chainID.Hex(),
 		Mode:     0700,
 		Typeflag: tar.TypeDir,
 	})
 	if err != nil {
-		return "", "", errors.Wrap(om.ErrImageCannotBeComposed, "cannot add directory to tar writer")
+		return errors.Wrap(om.ErrImageCannotBeComposed, "cannot add directory to tar writer")
 	}
 
 	if _, err := tf.Seek(0, 0); err != nil {
-		return "", "", err
+		return err
 	}
 
 	fi, err := tf.Stat()
 	if err != nil {
-		return "", "", err
+		return err
 	}
 
 	err = tw.WriteHeader(&tar.Header{
@@ -137,17 +119,17 @@ func packLayer(parentDigest digest.Digest, iter *om.Layer, tw *tar.Writer) (dige
 	})
 
 	if err != nil {
-		return "", "", errors.Wrap(om.ErrImageCannotBeComposed, "cannot add file to tar writer")
+		return errors.Wrap(om.ErrImageCannotBeComposed, "cannot add file to tar writer")
 	}
 
 	if _, err := io.Copy(tw, tf); err != nil {
-		return "", "", err
+		return err
 	}
 
-	return chainID, packDigest, nil
+	return nil
 }
 
-func writeLayerConfig(chainID digest.Digest, parentID digest.Digest, iter *om.Layer, tw *tar.Writer) error {
+func (d *Docker) writeLayerConfig(chainID digest.Digest, parentID digest.Digest, iter *om.Layer, tw *tar.Writer) error {
 	var parent string
 	if parentID != "" {
 		parent = parentID.Hex()
@@ -179,7 +161,7 @@ func writeLayerConfig(chainID digest.Digest, parentID digest.Digest, iter *om.La
 	return nil
 }
 
-func writeRepositories(tw *tar.Writer) error {
+func (d *Docker) writeRepositories(tw *tar.Writer) error {
 	content, err := json.Marshal(map[string]interface{}{})
 	if err != nil {
 		return err
@@ -202,7 +184,7 @@ func writeRepositories(tw *tar.Writer) error {
 	return nil
 }
 
-func writeManifest(layer *om.Layer, chainIDs []digest.Digest, tw *tar.Writer) error {
+func (d *Docker) writeManifest(layer *om.Layer, chainIDs []digest.Digest, tw *tar.Writer) error {
 	chainIDHexs := []string{}
 	for _, chainID := range chainIDs {
 		chainIDHexs = append(chainIDHexs, path.Join(chainID.Hex(), "layer.tar"))
@@ -236,7 +218,7 @@ func writeManifest(layer *om.Layer, chainIDs []digest.Digest, tw *tar.Writer) er
 	return nil
 }
 
-func writeImageConfig(chainID digest.Digest, diffIDs []digest.Digest, layer *om.Layer, tw *tar.Writer) error {
+func (d *Docker) writeImageConfig(chainID digest.Digest, diffIDs []digest.Digest, layer *om.Layer, tw *tar.Writer) error {
 	config, err := layer.Config()
 	if err != nil {
 		return errors.Wrap(om.ErrInvalidLayer, err.Error())

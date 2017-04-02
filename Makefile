@@ -22,7 +22,10 @@ test-ci:
 run-docker:
 	docker run -v /var/run/docker.sock:/var/run/docker.sock -v /tmp --privileged --rm box-builder/overmount
 
-docker-test:
+docker-deps:
+	go get github.com/opencontainers/image-tools/...
+
+docker-test: docker-deps
 	go build -v -o /dev/null ./examples/... ./om/...
 	set -e; for test in $(shell go list ./... | grep -v vendor); do go test -cover -v $${test} -check.v; done
 
