@@ -32,7 +32,7 @@ func (m *mountSuite) SetUpTest(c *C) {
 	if err != nil {
 		panic(err)
 	}
-	repo, err := NewRepository(tmpdir)
+	repo, err := NewRepository(tmpdir, os.Getenv("VIRTUAL") != "")
 	if err != nil {
 		panic(err)
 	}
@@ -52,6 +52,11 @@ func (m *mountSuite) TestRepositoryTempDir(c *C) {
 }
 
 func (m *mountSuite) TestBasicImageMount(c *C) {
+	if m.Repository.IsVirtual() {
+		c.Skip("Cannot mount virtual layers")
+		return
+	}
+
 	layerNames := []string{"one", "two", "three"}
 
 	for i := 0; i < len(layerNames); i++ {
@@ -174,7 +179,7 @@ func (m *mountSuite) TestImageUnpack(c *C) {
 		tarfile, err := os.Open(layerMap[layerID])
 		c.Assert(err, IsNil)
 		layer, err := m.Repository.NewLayer(layerID, parent)
-		c.Assert(os.MkdirAll(layer.Path(), 0700), IsNil)
+		c.Assert(os.MkdirAll(layer.layerBase(), 0700), IsNil)
 		c.Assert(err, IsNil)
 		parent = layer
 		digest, err := layer.Unpack(tarfile)
@@ -182,17 +187,19 @@ func (m *mountSuite) TestImageUnpack(c *C) {
 		c.Assert(digest, NotNil)
 	}
 
-	image := m.Repository.NewImage(parent)
-	c.Assert(image.Mount(), IsNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/bin/docker-entrypoint.sh"))
-	c.Assert(err, IsNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/var/lib/postgresql"))
-	c.Assert(err, IsNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/etc/passwd"))
-	c.Assert(err, IsNil)
-	c.Assert(image.Unmount(), IsNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/bin/docker-entrypoint.sh"))
-	c.Assert(err, NotNil)
-	_, err = os.Stat(path.Join(parent.MountPath(), "/etc/passwd"))
-	c.Assert(err, NotNil)
+	if !m.Repository.IsVirtual() {
+		image := m.Repository.NewImage(parent)
+		c.Assert(image.Mount(), IsNil)
+		_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/bin/docker-entrypoint.sh"))
+		c.Assert(err, IsNil)
+		_, err = os.Stat(path.Join(parent.MountPath(), "/var/lib/postgresql"))
+		c.Assert(err, IsNil)
+		_, err = os.Stat(path.Join(parent.MountPath(), "/etc/passwd"))
+		c.Assert(err, IsNil)
+		c.Assert(image.Unmount(), IsNil)
+		_, err = os.Stat(path.Join(parent.MountPath(), "/usr/local/bin/docker-entrypoint.sh"))
+		c.Assert(err, NotNil)
+		_, err = os.Stat(path.Join(parent.MountPath(), "/etc/passwd"))
+		c.Assert(err, NotNil)
+	}
 }
