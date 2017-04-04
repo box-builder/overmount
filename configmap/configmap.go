@@ -110,7 +110,7 @@ func FromOCIV1(img *v1.Image) *overmount.ImageConfig {
 // ToOCIV1 converts an overmount image configuration to an OCI one.
 func ToOCIV1(config *overmount.ImageConfig) *v1.Image {
 	return &v1.Image{
-		Created:      config.Created,
+		Created:      &config.Created,
 		Author:       config.Author,
 		Architecture: config.Architecture,
 		OS:           config.OS,
