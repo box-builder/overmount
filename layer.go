@@ -14,10 +14,11 @@ import (
 )
 
 const (
-	rootFSPath   = "rootfs"
-	parentPath   = "parent"
-	configPath   = "config.json"
-	lockFilePath = "lockfile"
+	rootFSPath       = "rootfs"
+	parentPath       = "parent"
+	configPath       = "config.json"
+	lockFilePath     = "lockfile"
+	virtualLayerPath = "layer.tar"
 )
 
 // CreateLayer prepares a new layer for work and creates it in the repository.
@@ -53,7 +54,7 @@ func (r *Repository) newLayer(id string, parent *Layer, create bool) (*Layer, er
 		return nil, err
 	}
 
-	layer.asset, err = NewAsset(layer.Path(), digest.SHA256.Digester())
+	layer.asset, err = NewAsset(layer.Path(), digest.SHA256.Digester(), r.IsVirtual())
 	if err != nil {
 		return nil, err
 	}
@@ -102,6 +103,10 @@ func (l *Layer) layerBase() string {
 
 // Path gets the layer store path for a given subpath.
 func (l *Layer) Path() string {
+	if l.repository.IsVirtual() {
+		return filepath.Join(l.layerBase(), virtualLayerPath)
+	}
+
 	return filepath.Join(l.layerBase(), rootFSPath)
 }
 

@@ -13,10 +13,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/box-builder/overmount"
 	"github.com/box-builder/overmount/imgio"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 )
 
 func main() {
@@ -39,7 +39,7 @@ func main() {
 
 	fmt.Println("repository:", tmpdir)
 
-	repo, err := overmount.NewRepository(tmpdir)
+	repo, err := overmount.NewRepository(tmpdir, os.Getenv("OVERMOUNT_VIRTUAL") != "")
 	if err != nil {
 		panic(err)
 	}

@@ -3,6 +3,7 @@ package overmount
 import (
 	"compress/gzip"
 	"net/http"
+	"os"
 	"path"
 
 	digest "github.com/opencontainers/go-digest"
@@ -51,7 +52,7 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 
 	parentID := layer.Parent.ID()
 	id := layer.ID()
-	m.Repository, err = NewRepository(m.Repository.baseDir)
+	m.Repository, err = NewRepository(m.Repository.baseDir, os.Getenv("VIRTUAL") != "")
 	c.Assert(err, IsNil)
 	layer, err = m.Repository.NewLayer(id, nil)
 	c.Assert(err, IsNil)
@@ -63,7 +64,7 @@ func (m *mountSuite) TestLayerParentCommit(c *C) {
 	}
 
 	c.Assert(count, Equals, layerCount)
-	m.Repository, err = NewRepository(m.Repository.baseDir)
+	m.Repository, err = NewRepository(m.Repository.baseDir, os.Getenv("VIRTUAL") != "")
 	c.Assert(err, IsNil)
 	layer, err = m.Repository.NewLayer(id, nil)
 	layer.Parent = nil

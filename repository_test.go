@@ -9,13 +9,13 @@ import (
 func (m *mountSuite) TestBasicRepository(c *C) {
 	tempdir, err := ioutil.TempDir("", "")
 	c.Assert(err, IsNil)
-	r, err := NewRepository(tempdir)
+	r, err := NewRepository(tempdir, false)
 	c.Assert(err, IsNil)
 	c.Assert(r.baseDir, Equals, tempdir)
 	c.Assert(r.editMutex, NotNil)
 	c.Assert(r.layers, NotNil)
 	c.Assert(r.mounts, NotNil)
-	_, err = NewRepository("/dev/zero")
+	_, err = NewRepository("/dev/zero", false)
 	c.Assert(err, NotNil)
 
 	r.baseDir = "/dev/zero"
@@ -24,6 +24,11 @@ func (m *mountSuite) TestBasicRepository(c *C) {
 }
 
 func (m *mountSuite) TestRepositoryPropagation(c *C) {
+	if m.Repository.IsVirtual() {
+		c.Skip("Cannot mount virtual layers")
+		return
+	}
+
 	image, layer := m.makeImage(c, 2)
 	c.Assert(image.Mount(), IsNil)
 	c.Assert(len(m.Repository.mounts), Equals, 1)

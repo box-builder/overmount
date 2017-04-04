@@ -32,6 +32,11 @@ func main() {
 			EnvVar: "OVERMOUNT_REPO",
 			Value:  path.Join(os.Getenv("HOME"), ".overmount"),
 		},
+		cli.BoolFlag{
+			Name:   "virtual",
+			Usage:  "Switch on virtual repositories (keeping tar files only, no expansion of files)",
+			EnvVar: "OVERMOUNT_VIRTUAL",
+		},
 	}
 
 	app.Commands = []cli.Command{
@@ -82,7 +87,7 @@ func main() {
 }
 
 func constructImage(ctx *cli.Context) (*overmount.Image, *overmount.Layer) {
-	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"), ctx.GlobalBool("virtual"))
 	if err != nil {
 		errExit(2, err)
 	}
@@ -115,7 +120,7 @@ func unmountImage(ctx *cli.Context) {
 }
 
 func mountImage(ctx *cli.Context) {
-	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"), ctx.GlobalBool("virtual"))
 	if err != nil {
 		errExit(2, err)
 	}
@@ -143,7 +148,7 @@ func mountImage(ctx *cli.Context) {
 }
 
 func exportImage(ctx *cli.Context) {
-	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"), ctx.GlobalBool("virtual"))
 	if err != nil {
 		errExit(2, err)
 	}
@@ -191,7 +196,7 @@ func exportImage(ctx *cli.Context) {
 }
 
 func importImage(ctx *cli.Context) {
-	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"), ctx.GlobalBool("virtual"))
 	if err != nil {
 		errExit(2, err)
 	}
@@ -226,7 +231,7 @@ func importImage(ctx *cli.Context) {
 }
 
 func listLayers(ctx *cli.Context) {
-	repo, err := overmount.NewRepository(ctx.GlobalString("repo"))
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"), ctx.GlobalBool("virtual"))
 	if err != nil {
 		errExit(2, err)
 	}

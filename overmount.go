@@ -75,6 +75,7 @@ type Repository struct {
 	baseDir string
 	layers  map[string]*Layer
 	mounts  []*Mount
+	virtual bool
 
 	editMutex *sync.Mutex
 }
@@ -105,6 +106,7 @@ type Layer struct {
 	id         string
 	asset      *Asset
 	repository *Repository
+	virtual    bool
 
 	editMutex *sync.Mutex
 }

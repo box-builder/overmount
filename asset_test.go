@@ -20,7 +20,7 @@ func (m *mountSuite) TestAssetBasic(c *C) {
 	}
 
 	for dir, check := range dispatchTable {
-		asset, err := NewAsset(dir, digest.SHA256.Digester())
+		asset, err := NewAsset(dir, digest.SHA256.Digester(), false)
 		c.Assert(err, IsNil)
 		c.Assert(asset.Path(), Equals, dir)
 		c.Assert(asset.Digest(), Equals, emptyDigest)

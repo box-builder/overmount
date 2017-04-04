@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/ioutil"
+	"os"
 	"strings"
 	. "testing"
 
@@ -33,7 +34,7 @@ func (d *dockerSuite) SetUpTest(c *C) {
 		panic(err)
 	}
 
-	d.repository, err = om.NewRepository(tmpdir)
+	d.repository, err = om.NewRepository(tmpdir, os.Getenv("VIRTUAL") != "")
 	if err != nil {
 		panic(err)
 	}

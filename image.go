@@ -17,6 +17,10 @@ func (r *Repository) NewImage(topLayer *Layer) *Image {
 //
 // Call unmount to undo this operation.
 func (i *Image) Mount() error {
+	if i.repository.IsVirtual() {
+		return errors.Wrap(ErrMountCannotProceed, "cannot mount in virtual repository")
+	}
+
 	upper := i.layer.Path()
 	target := i.layer.MountPath()
 

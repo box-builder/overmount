@@ -9,6 +9,11 @@ import (
 )
 
 func (m *mountSuite) TestImageMountUnmount(c *C) {
+	if m.Repository.IsVirtual() {
+		c.Skip("Cannot mount virtual layers")
+		return
+	}
+
 	image, layer := m.makeImage(c, 2)
 
 	image2 := m.Repository.NewImage(layer.Parent) // only one layer

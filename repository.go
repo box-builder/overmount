@@ -16,13 +16,20 @@ const lockFile = "repository.lock"
 
 // NewRepository constructs a *Repository and creates the dir in which the
 // repository lives. A repository is used to hold images and mounts.
-func NewRepository(baseDir string) (*Repository, error) {
+func NewRepository(baseDir string, virtual bool) (*Repository, error) {
 	return &Repository{
 		baseDir:   baseDir,
 		layers:    map[string]*Layer{},
 		mounts:    []*Mount{},
 		editMutex: new(sync.Mutex),
+		virtual:   virtual,
 	}, os.MkdirAll(baseDir, 0700)
+}
+
+// IsVirtual reports if the repository is virtual. Virtual repositories hold
+// tars and cannot accept mounts.
+func (r *Repository) IsVirtual() bool {
+	return r.virtual
 }
 
 // TempDir returns a temporary path within the repository
