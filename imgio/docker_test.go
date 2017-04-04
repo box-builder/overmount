@@ -1,10 +1,12 @@
 package imgio
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"io"
 	"io/ioutil"
-	"os"
+	"strings"
 	. "testing"
 
 	. "gopkg.in/check.v1"
@@ -73,9 +75,23 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 			c.Assert(err, IsNil, Commentf("%v", imageName))
 			resp, err := d.client.ImageLoad(context.Background(), reader, false)
 			c.Assert(err, IsNil, Commentf("%v", imageName))
-			_, err = io.Copy(os.Stdout, resp.Body)
+
+			br := bufio.NewReader(resp.Body)
+			for {
+				line, err := br.ReadString('\n')
+				line = strings.TrimSpace(line)
+				if line != "" {
+					myMap := map[string]interface{}{}
+					c.Assert(json.Unmarshal([]byte(line), &myMap), IsNil)
+					c.Assert(myMap["stream"], NotNil)
+					c.Assert(strings.HasPrefix(myMap["stream"].(string), "Loaded image ID"), Equals, true)
+				}
+				if err != nil {
+					break
+				}
+			}
+
 			c.Assert(err, IsNil, Commentf("%v", imageName))
 		}
-
 	}
 }
