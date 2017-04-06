@@ -28,8 +28,14 @@ func (r *Repository) CreateLayer(id string, parent *Layer) (*Layer, error) {
 
 // NewLayer prepares a new layer for work but DOES NOT add it to the
 // repository. The ID is the directory that will be created in the repository;
-// see NewRepository for more info.
+// see NewRepository for more info. If the layer is already in the repository
+// and known, it will be returned and no file operations or checks will be
+// performed. The layer may not actually exist at this point.
 func (r *Repository) NewLayer(id string, parent *Layer) (*Layer, error) {
+	if layer, ok := r.layers[id]; ok {
+		return layer, nil
+	}
+
 	return r.newLayer(id, parent, false)
 }
 
