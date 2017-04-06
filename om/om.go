@@ -41,6 +41,24 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
+			Name:  "layer",
+			Usage: "Perform commands on layers",
+			Subcommands: []cli.Command{
+				{
+					Name:      "tag",
+					Usage:     "Tag a layer",
+					ArgsUsage: "[layer ID] [tag1] [tag2] ...",
+					Action:    tagLayer,
+				},
+				{
+					Name:      "get",
+					Usage:     "Get a layer by tag",
+					ArgsUsage: "[tag]",
+					Action:    getLayerByTag,
+				},
+			},
+		},
+		{
 			Name:  "image",
 			Usage: "Perform commands on images",
 			Subcommands: []cli.Command{
@@ -252,4 +270,54 @@ func listLayers(ctx *cli.Context) {
 			depth++
 		}
 	}
+}
+
+func tagLayer(ctx *cli.Context) {
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"), ctx.GlobalBool("virtual"))
+	if err != nil {
+		errExit(2, err)
+	}
+
+	if len(ctx.Args()) < 2 {
+		errExit(2, errors.New("invalid arguments"))
+	}
+
+	tags := ctx.Args()[1:]
+	layerID := ctx.Args()[0]
+
+	layer, err := repo.NewLayer(layerID, nil)
+	if err != nil {
+		errExit(2, err)
+	}
+
+	if !layer.Exists() {
+		errExit(2, errors.New("layer does not exist"))
+	}
+
+	for _, tag := range tags {
+		fmt.Printf("Tagging %v with tag %q\n", layer.ID(), tag)
+		if err := repo.AddTag(tag, layer); err != nil {
+			errExit(2, err)
+		}
+	}
+}
+
+func getLayerByTag(ctx *cli.Context) {
+	repo, err := overmount.NewRepository(ctx.GlobalString("repo"), ctx.GlobalBool("virtual"))
+	if err != nil {
+		errExit(2, err)
+	}
+
+	if len(ctx.Args()) != 1 {
+		errExit(2, errors.New("invalid arguments"))
+	}
+
+	tag := ctx.Args()[0]
+
+	layer, err := repo.GetTag(tag)
+	if err != nil {
+		errExit(2, err)
+	}
+
+	fmt.Println(layer.ID())
 }
