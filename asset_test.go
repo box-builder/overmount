@@ -11,6 +11,11 @@ import (
 )
 
 func (m *mountSuite) TestAssetBasic(c *C) {
+	if os.Getenv("VIRTUAL") != "" {
+		c.Skip("Cannot run this test with virtual layers")
+		return
+	}
+
 	tmpdir, err := ioutil.TempDir("", "")
 	c.Assert(err, IsNil)
 
@@ -36,4 +41,18 @@ func (m *mountSuite) TestAssetBasic(c *C) {
 		c.Assert(dg, Equals, digester.Digest())
 		c.Assert(dg, Equals, asset.Digest())
 	}
+
+	// Testing LoadDigest
+	dir := tmpdir
+
+	asset, err := NewAsset(dir, digest.SHA256.Digester(), false)
+	c.Assert(err, IsNil)
+	digester := digest.SHA256.Digester()
+	c.Assert(asset.Pack(digester.Hash()), IsNil)
+	asset.resetDigest()
+	dg, err := asset.LoadDigest()
+	c.Assert(err, IsNil)
+	c.Assert(dg, Equals, digester.Digest())
+	c.Assert(asset.Digest(), Equals, digester.Digest())
+}
 }
