@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/docker/pkg/archive"
 	digest "github.com/opencontainers/go-digest"
+	"github.com/pkg/errors"
 	. "gopkg.in/check.v1"
 )
 
@@ -54,6 +55,14 @@ func (m *mountSuite) TestAssetBasic(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(dg, Equals, digester.Digest())
 	c.Assert(asset.Digest(), Equals, digester.Digest())
+
+	tf, err := ioutil.TempDir("", "overmount-temp-symlink-target-")
+	c.Assert(os.RemoveAll(dir), IsNil)
+	c.Assert(os.Symlink(tf, dir), IsNil)
+	reader, err := archive.Tar("/go/src/github.com/box-builder/overmount", archive.Uncompressed)
+	c.Assert(err, IsNil)
+	c.Assert(errors.Cause(asset.Unpack(reader)), Equals, ErrInvalidAsset)
+	c.Assert(errors.Cause(asset.Pack(ioutil.Discard)), Equals, ErrInvalidAsset)
 }
 
 func (m *mountSuite) TestAssetVirtual(c *C) {
@@ -94,4 +103,13 @@ func (m *mountSuite) TestAssetVirtual(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(asset.Unpack(reader), NotNil)
 	c.Assert(asset.Pack(ioutil.Discard), NotNil)
+
+	tf, err := ioutil.TempFile("", "box-symlink-test-")
+	c.Assert(err, IsNil)
+	c.Assert(os.Remove(layerFile), IsNil)
+	c.Assert(os.Symlink(tf.Name(), layerFile), IsNil)
+	reader, err = archive.Tar("/go/src/github.com/box-builder/overmount", archive.Uncompressed)
+	c.Assert(err, IsNil)
+	c.Assert(errors.Cause(asset.Unpack(reader)), Equals, ErrInvalidAsset)
+	c.Assert(errors.Cause(asset.Pack(ioutil.Discard)), Equals, ErrInvalidAsset)
 }
