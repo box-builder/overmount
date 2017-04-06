@@ -22,6 +22,9 @@ func (m *mountSuite) TestImageMountUnmount(c *C) {
 	c.Assert(errors.Cause(image2.Unmount()), Equals, ErrMountCannotProceed)
 	c.Assert(image.Mount(), IsNil)
 	c.Assert(image.Unmount(), IsNil)
+
+	layer.id = ".."
+	c.Assert(errors.Cause(image.Mount()), Equals, ErrMountCannotProceed)
 }
 
 func (m *mountSuite) TestImageCommit(c *C) {

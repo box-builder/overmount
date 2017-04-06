@@ -21,4 +21,5 @@ func (m *mountSuite) TestTags(c *C) {
 	c.Assert(layer2.ID(), Equals, layer.ID())
 	c.Assert(layer2.RestoreParent(), IsNil)
 	c.Assert(layer2.Parent.ID(), Equals, layer.Parent.ID())
+	c.Assert(m.Repository.RemoveTag("test"), IsNil)
 }

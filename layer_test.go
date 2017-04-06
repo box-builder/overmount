@@ -36,6 +36,9 @@ func (m *mountSuite) TestLayerProperties(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(dg.Digest(), Equals, d2)
 	c.Assert(dg2, Equals, dg.Digest())
+	c.Assert(layer.Exists(), Equals, true)
+	c.Assert(layer.Remove(), IsNil)
+	c.Assert(layer.Exists(), Equals, false)
 }
 
 func (m *mountSuite) TestLayerParentCommit(c *C) {
