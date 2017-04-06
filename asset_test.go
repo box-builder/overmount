@@ -55,4 +55,43 @@ func (m *mountSuite) TestAssetBasic(c *C) {
 	c.Assert(dg, Equals, digester.Digest())
 	c.Assert(asset.Digest(), Equals, digester.Digest())
 }
+
+func (m *mountSuite) TestAssetVirtual(c *C) {
+	if os.Getenv("VIRTUAL") == "" {
+		c.Skip("This test is for virtual layers only")
+		return
+	}
+
+	dir, err := ioutil.TempDir("", "overmount-asset-test-")
+	c.Assert(err, IsNil)
+
+	layerFile := path.Join(dir, "layer.tar")
+
+	asset, err := NewAsset(layerFile, digest.SHA256.Digester(), true)
+	c.Assert(err, IsNil)
+	c.Assert(asset.Path(), Equals, layerFile)
+	c.Assert(asset.Digest(), Equals, emptyDigest)
+
+	reader, err := archive.Tar("/go/src/github.com/box-builder/overmount", archive.Uncompressed)
+	c.Assert(err, IsNil)
+	c.Assert(asset.Unpack(reader), IsNil)
+	c.Assert(asset.Digest(), Not(Equals), emptyDigest)
+	fi, err := os.Stat(asset.Path())
+	c.Assert(err, IsNil)
+	c.Assert(fi.Size(), Not(Equals), 0)
+	dg := asset.Digest()
+	asset.resetDigest()
+	c.Assert(asset.Digest(), Not(Equals), dg)
+	_, err = asset.LoadDigest()
+	c.Assert(err, IsNil)
+	c.Assert(asset.Digest(), Equals, dg)
+
+	errdir, err := ioutil.TempDir("", "overmount-asset-test-")
+	c.Assert(err, IsNil)
+	asset, err = NewAsset(errdir, digest.SHA256.Digester(), true)
+	c.Assert(err, IsNil)
+	reader, err = archive.Tar("/go/src/github.com/box-builder/overmount", archive.Uncompressed)
+	c.Assert(err, IsNil)
+	c.Assert(asset.Unpack(reader), NotNil)
+	c.Assert(asset.Pack(ioutil.Discard), NotNil)
 }
