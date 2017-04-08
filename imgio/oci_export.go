@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -26,13 +25,13 @@ const (
 )
 
 // Export exports an OCI image to the reader as a tar file.
-func (o *OCI) Export(layer *om.Layer) (io.ReadCloser, error) {
+func (o *OCI) Export(repo *om.Repository, layer *om.Layer) (io.ReadCloser, error) {
 	if !layer.Exists() {
 		return nil, errors.Wrap(om.ErrInvalidLayer, "layer does not exist")
 	}
 
 	r, w := io.Pipe()
-	go o.write(w, layer)
+	go o.write(repo, w, layer)
 
 	return r, nil
 }
@@ -61,9 +60,9 @@ func (o *OCI) writePrefix(tw *tar.Writer) error {
 	return o.writeImageLayout(tw)
 }
 
-func (o *OCI) writeLayers(layer *om.Layer, tw *tar.Writer) ([]digest.Digest, []digest.Digest, []int64, []*om.Layer, error) {
+func (o *OCI) writeLayers(repo *om.Repository, layer *om.Layer, tw *tar.Writer) ([]digest.Digest, []digest.Digest, []int64, []*om.Layer, error) {
 	return runChain(layer, tw, func(parent digest.Digest, iter *om.Layer, tw *tar.Writer) (digest.Digest, digest.Digest, int64, error) {
-		tf, err := ioutil.TempFile("", tempfilePrefix)
+		tf, err := repo.TempFile()
 		if err != nil {
 			return "", "", 0, err
 		}
@@ -191,7 +190,7 @@ func (o *OCI) writeManifest(manifest v1.Manifest, tw *tar.Writer) (digest.Digest
 	return o.writeJSONBlob(manifest, tw)
 }
 
-func (o *OCI) write(w *io.PipeWriter, layer *om.Layer) (retErr error) {
+func (o *OCI) write(repo *om.Repository, w *io.PipeWriter, layer *om.Layer) (retErr error) {
 	defer func() {
 		if retErr != nil {
 			w.CloseWithError(retErr)
@@ -206,7 +205,7 @@ func (o *OCI) write(w *io.PipeWriter, layer *om.Layer) (retErr error) {
 		return err
 	}
 
-	_, diffIDs, sizes, _, err := o.writeLayers(layer, tw)
+	_, diffIDs, sizes, _, err := o.writeLayers(repo, layer, tw)
 	if err != nil {
 		return err
 	}

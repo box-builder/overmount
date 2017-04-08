@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -19,18 +18,18 @@ import (
 )
 
 // Export produces a tar represented as an io.ReadCloser from the Layer provided.
-func (d *Docker) Export(layer *om.Layer) (io.ReadCloser, error) {
+func (d *Docker) Export(repo *om.Repository, layer *om.Layer) (io.ReadCloser, error) {
 	if !layer.Exists() {
 		return nil, errors.Wrap(om.ErrInvalidLayer, "layer does not exist")
 	}
 
 	r, w := io.Pipe()
-	go d.writeTar(layer, w)
+	go d.writeTar(repo, layer, w)
 
 	return r, nil
 }
 
-func (d *Docker) writeTar(layer *om.Layer, w *io.PipeWriter) (retErr error) {
+func (d *Docker) writeTar(repo *om.Repository, layer *om.Layer, w *io.PipeWriter) (retErr error) {
 	defer func() {
 		if retErr == nil {
 			w.Close()
@@ -42,7 +41,7 @@ func (d *Docker) writeTar(layer *om.Layer, w *io.PipeWriter) (retErr error) {
 	tw := tar.NewWriter(w)
 
 	chainIDs, diffIDs, _, _, err := runChain(layer, tw, func(parent digest.Digest, iter *om.Layer, tw *tar.Writer) (digest.Digest, digest.Digest, int64, error) {
-		tf, err := ioutil.TempFile("", "overmount-pack-")
+		tf, err := repo.TempFile()
 		if err != nil {
 			return "", "", 0, err
 		}

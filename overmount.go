@@ -131,5 +131,5 @@ type Importer interface {
 // overmount repositories.
 type Exporter interface {
 	// Export produces a tar represented as an io.ReadCloser from the Layer provided.
-	Export(*Layer) (io.ReadCloser, error)
+	Export(*Repository, *Layer) (io.ReadCloser, error)
 }
