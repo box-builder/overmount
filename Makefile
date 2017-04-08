@@ -32,11 +32,11 @@ test-ci:
 TEST_NAME:="overmount-test-$(shell head -c +10 /dev/urandom | sha256sum | awk '{ print $$1 }')"
 
 run-docker-cover:
-		docker run -e VIRTUAL=${VIRTUAL} -v /var/run/docker.sock:/var/run/docker.sock -v /tmp --privileged --name ${TEST_NAME} box-builder/overmount
-		@echo Your test container ID is ${TEST_NAME}
+	docker run -e VIRTUAL=${VIRTUAL} -v /var/run/docker.sock:/var/run/docker.sock -v /tmp --privileged --name ${TEST_NAME} box-builder/overmount
+	@echo Your test container ID is ${TEST_NAME}
 
 run-docker:
-		docker run -e VIRTUAL=${VIRTUAL} -v /var/run/docker.sock:/var/run/docker.sock -v /tmp --privileged --rm box-builder/overmount
+	docker run -e VIRTUAL=${VIRTUAL} -v /var/run/docker.sock:/var/run/docker.sock -v /tmp --privileged --rm box-builder/overmount
 
 docker-deps:
 	go get github.com/opencontainers/image-tools/...

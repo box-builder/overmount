@@ -195,9 +195,7 @@ func (l *Layer) LoadParent() error {
 	}
 
 	parent, err := l.repository.NewLayer(string(id), nil)
-	if err == ErrLayerExists {
-		parent = l.repository.layers[string(id)]
-	} else if err != nil {
+	if err != nil {
 		return err
 	}
 
@@ -240,6 +238,6 @@ func (l *Layer) Pack(writer io.Writer) (digest.Digest, error) {
 func (l *Layer) Remove() error {
 	return l.edit(func() error {
 		l.repository.RemoveLayer(l)
-		return os.RemoveAll(l.Path())
+		return os.RemoveAll(l.layerBase())
 	})
 }
