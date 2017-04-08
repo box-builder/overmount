@@ -22,7 +22,7 @@ func (r *Repository) tagFileFor(name string) string {
 // AddTag tags a layer with the name
 func (r *Repository) AddTag(name string, layer *Layer) error {
 	return r.edit(func() error {
-		f, err := ioutil.TempFile("", "temp-tag")
+		f, err := r.TempFile()
 		if err != nil {
 			return err
 		}

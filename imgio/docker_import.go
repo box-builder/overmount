@@ -30,7 +30,7 @@ type unpackedImage struct {
 // it into the overmount repository.  Returns the top-most layer and any
 // error.
 func (d *Docker) Import(r *om.Repository, reader io.ReadCloser) ([]*om.Layer, error) {
-	tempdir, err := ioutil.TempDir("", "overmount-unpack-")
+	tempdir, err := r.TempDir()
 	if err != nil {
 		return nil, err
 	}

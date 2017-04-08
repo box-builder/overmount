@@ -41,6 +41,15 @@ func (r *Repository) TempDir() (string, error) {
 	return ioutil.TempDir(basePath, "")
 }
 
+// TempFile returns a temporary file within the repository
+func (r *Repository) TempFile() (*os.File, error) {
+	basePath := filepath.Join(r.baseDir, tmpdirBase)
+	if err := os.MkdirAll(basePath, 0700); err != nil {
+		return nil, err
+	}
+	return ioutil.TempFile(basePath, "")
+}
+
 // NewMount creates a new mount for use. Target, lower, and upper correspond to
 // specific fields in the mount stanza; read
 // https://www.kernel.org/doc/Documentation/filesystems/overlayfs.txt for more
@@ -128,5 +137,5 @@ func (r *Repository) Import(i Importer, reader io.ReadCloser) ([]*Layer, error) 
 
 // Export an image (provided via writer) from the repository.
 func (r *Repository) Export(e Exporter, layer *Layer) (io.ReadCloser, error) {
-	return e.Export(layer)
+	return e.Export(r, layer)
 }

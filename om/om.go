@@ -200,7 +200,7 @@ func exportImage(ctx *cli.Context) {
 		exporter = imgio.NewOCI()
 	}
 
-	reader, err := exporter.Export(layer)
+	reader, err := exporter.Export(repo, layer)
 	if err != nil {
 		errExit(2, err)
 	}
