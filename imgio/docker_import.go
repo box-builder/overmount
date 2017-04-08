@@ -23,6 +23,7 @@ type unpackedImage struct {
 	layers         map[string]*om.Layer
 	layerFileMap   map[string]string
 	layerParentMap map[string]string
+	tagMap         map[string][]string
 }
 
 // Import takes a tar represented as an io.Reader, and converts and unpacks
@@ -47,10 +48,10 @@ func (d *Docker) Import(r *om.Repository, reader io.ReadCloser) ([]*om.Layer, er
 		return nil, err
 	}
 
-	return d.constructImage(up)
+	return d.constructImage(r, up)
 }
 
-func (d *Docker) constructImage(up *unpackedImage) ([]*om.Layer, error) {
+func (d *Docker) constructImage(r *om.Repository, up *unpackedImage) ([]*om.Layer, error) {
 	layers := []*om.Layer{}
 	digestMap := map[digest.Digest]*om.Layer{}
 
@@ -93,6 +94,15 @@ func (d *Docker) constructImage(up *unpackedImage) ([]*om.Layer, error) {
 			return nil, err
 		}
 
+		tags, ok := up.tagMap[top.ID()]
+		if ok {
+			for _, tag := range tags {
+				if err := r.AddTag(tag, top); err != nil {
+					return nil, err
+				}
+			}
+		}
+
 		layers = append(layers, top)
 	}
 
@@ -106,6 +116,7 @@ func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage,
 		layerParentMap: map[string]string{},
 		layers:         map[string]*om.Layer{},
 		images:         []*image.Image{},
+		tagMap:         map[string][]string{},
 	}
 
 	err := filepath.Walk(tempdir, func(p string, fi os.FileInfo, err error) error {
@@ -122,10 +133,6 @@ func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage,
 				return err
 			}
 			f.Close()
-
-			if _, ok := layerJSON["id"]; !ok {
-				return errors.New("missing layer id")
-			}
 
 			layerID, ok := layerJSON["id"].(string)
 			if !ok {
@@ -160,6 +167,37 @@ func (d *Docker) unpackLayers(r *om.Repository, tempdir string) (*unpackedImage,
 			}
 
 			up.images = append(up.images, img)
+		} else if path.Base(p) == "manifest.json" {
+			content, err := ioutil.ReadFile(p)
+			if err != nil {
+				return err
+			}
+
+			manifest := []map[string]interface{}{}
+			if err := json.Unmarshal(content, &manifest); err != nil {
+				return err
+			}
+
+			for _, item := range manifest {
+				if item, ok := item["Layers"]; !ok || item == nil {
+					continue
+				}
+
+				tags, ok := item["RepoTags"].([]interface{})
+				if !ok {
+					continue
+				}
+
+				layers := item["Layers"].([]interface{})
+
+				lastLayer := layers[len(layers)-1].(string)
+				lastLayer = path.Dir(lastLayer)
+				up.tagMap[lastLayer] = []string{}
+
+				for _, tag := range tags {
+					up.tagMap[lastLayer] = append(up.tagMap[lastLayer], tag.(string))
+				}
+			}
 		}
 		return nil
 	})
