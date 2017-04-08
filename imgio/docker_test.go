@@ -52,6 +52,14 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 		"postgres:latest": []string{"postgres"},  // just a fatty
 	}
 
+	layerIDMap := map[string]struct{}{}
+
+	tags := map[string]struct{}{
+		"golang:latest":   struct{}{},
+		"alpine:latest":   struct{}{},
+		"postgres:latest": struct{}{},
+	}
+
 	docker, err := NewDocker(d.client)
 	c.Assert(err, IsNil)
 
@@ -68,6 +76,7 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 		c.Assert(layers, NotNil, Commentf("%v", imageName))
 
 		for _, layer := range layers {
+			layerIDMap[layer.ID()] = struct{}{}
 			config, err := layer.Config()
 			c.Assert(err, IsNil, Commentf("%v", imageName))
 			c.Assert(config.Cmd, DeepEquals, cmd, Commentf("%v", imageName))
@@ -94,5 +103,12 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 
 			c.Assert(err, IsNil, Commentf("%v", imageName))
 		}
+	}
+
+	for tag := range tags {
+		layer, err := d.repository.GetTag(tag)
+		c.Assert(err, IsNil)
+		_, ok := layerIDMap[layer.ID()]
+		c.Assert(ok, Equals, true)
 	}
 }
