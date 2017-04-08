@@ -86,22 +86,28 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 			resp, err := d.client.ImageLoad(context.Background(), reader, false)
 			c.Assert(err, IsNil, Commentf("%v", imageName))
 
+			var (
+				found bool
+				line  string
+			)
+
 			br := bufio.NewReader(resp.Body)
 			for {
-				line, err := br.ReadString('\n')
+				line, err = br.ReadString('\n')
 				line = strings.TrimSpace(line)
-				if line != "" {
-					myMap := map[string]interface{}{}
-					c.Assert(json.Unmarshal([]byte(line), &myMap), IsNil)
-					c.Assert(myMap["stream"], NotNil)
-					c.Assert(strings.HasPrefix(myMap["stream"].(string), "Loaded image ID"), Equals, true)
+				myMap := map[string]interface{}{}
+				c.Assert(json.Unmarshal([]byte(line), &myMap), IsNil)
+				stream, ok := myMap["stream"].(string)
+				if ok {
+					found = strings.HasPrefix(stream, "Loaded image ID")
 				}
-				if err != nil {
+				if found || err != nil {
 					break
 				}
 			}
 
 			c.Assert(err, IsNil, Commentf("%v", imageName))
+			c.Assert(found, Equals, true)
 		}
 	}
 
