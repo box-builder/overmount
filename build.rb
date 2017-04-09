@@ -5,6 +5,8 @@ remotepath = "/go/src/github.com/box-builder/overmount"
 copy ".", remotepath
 
 inside remotepath do
+  run "chmod 777 ."
+
   run <<-EOF
   if [ ! -d vendor ]
   then
@@ -14,6 +16,10 @@ inside remotepath do
   fi
   EOF
 end
+
+run "groupadd -g 999 docker"
+run "usermod -aG docker nobody"
+run "chmod -R 777 /go"
 
 workdir remotepath
 
