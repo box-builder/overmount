@@ -112,7 +112,7 @@ func (a *Asset) Unpack(reader io.Reader) error {
 		}
 
 		// FIXME there's probably a double-unarchive bug here.
-		err := archive.Unpack(tee, a.path, &archive.TarOptions{})
+		err := archive.Unpack(tee, a.path, &archive.TarOptions{NoLchown: os.Geteuid() != 0})
 		if err != nil {
 			return err
 		}
