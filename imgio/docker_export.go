@@ -18,18 +18,18 @@ import (
 )
 
 // Export produces a tar represented as an io.ReadCloser from the Layer provided.
-func (d *Docker) Export(repo *om.Repository, layer *om.Layer) (io.ReadCloser, error) {
+func (d *Docker) Export(repo *om.Repository, layer *om.Layer, tags []string) (io.ReadCloser, error) {
 	if !layer.Exists() {
 		return nil, errors.Wrap(om.ErrInvalidLayer, "layer does not exist")
 	}
 
 	r, w := io.Pipe()
-	go d.writeTar(repo, layer, w)
+	go d.writeTar(repo, layer, w, tags)
 
 	return r, nil
 }
 
-func (d *Docker) writeTar(repo *om.Repository, layer *om.Layer, w *io.PipeWriter) (retErr error) {
+func (d *Docker) writeTar(repo *om.Repository, layer *om.Layer, w *io.PipeWriter, tags []string) (retErr error) {
 	defer func() {
 		if retErr == nil {
 			w.Close()
@@ -74,7 +74,7 @@ func (d *Docker) writeTar(repo *om.Repository, layer *om.Layer, w *io.PipeWriter
 		return err
 	}
 
-	if err := d.writeManifest(layer, chainIDs, tw); err != nil {
+	if err := d.writeManifest(layer, chainIDs, tw, tags); err != nil {
 		return err
 	}
 
@@ -183,7 +183,7 @@ func (d *Docker) writeRepositories(tw *tar.Writer) error {
 	return nil
 }
 
-func (d *Docker) writeManifest(layer *om.Layer, chainIDs []digest.Digest, tw *tar.Writer) error {
+func (d *Docker) writeManifest(layer *om.Layer, chainIDs []digest.Digest, tw *tar.Writer, tags []string) error {
 	chainIDHexs := []string{}
 	for _, chainID := range chainIDs {
 		chainIDHexs = append(chainIDHexs, path.Join(chainID.Hex(), "layer.tar"))
@@ -192,7 +192,7 @@ func (d *Docker) writeManifest(layer *om.Layer, chainIDs []digest.Digest, tw *ta
 	content, err := json.Marshal([]map[string]interface{}{
 		{
 			"Config":   fmt.Sprintf("%s.json", chainIDs[len(chainIDs)-1].Hex()),
-			"RepoTags": []string{},
+			"RepoTags": tags,
 			"Layers":   chainIDHexs,
 		},
 	})

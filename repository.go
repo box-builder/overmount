@@ -136,6 +136,6 @@ func (r *Repository) Import(i Importer, reader io.ReadCloser) ([]*Layer, error) 
 }
 
 // Export an image (provided via writer) from the repository.
-func (r *Repository) Export(e Exporter, layer *Layer) (io.ReadCloser, error) {
-	return e.Export(r, layer)
+func (r *Repository) Export(e Exporter, layer *Layer, tags []string) (io.ReadCloser, error) {
+	return e.Export(r, layer, tags)
 }

@@ -25,13 +25,13 @@ const (
 )
 
 // Export exports an OCI image to the reader as a tar file.
-func (o *OCI) Export(repo *om.Repository, layer *om.Layer) (io.ReadCloser, error) {
+func (o *OCI) Export(repo *om.Repository, layer *om.Layer, tags []string) (io.ReadCloser, error) {
 	if !layer.Exists() {
 		return nil, errors.Wrap(om.ErrInvalidLayer, "layer does not exist")
 	}
 
 	r, w := io.Pipe()
-	go o.write(repo, w, layer)
+	go o.write(repo, w, layer, tags)
 
 	return r, nil
 }
@@ -190,7 +190,7 @@ func (o *OCI) writeManifest(manifest v1.Manifest, tw *tar.Writer) (digest.Digest
 	return o.writeJSONBlob(manifest, tw)
 }
 
-func (o *OCI) write(repo *om.Repository, w *io.PipeWriter, layer *om.Layer) (retErr error) {
+func (o *OCI) write(repo *om.Repository, w *io.PipeWriter, layer *om.Layer, tags []string) (retErr error) {
 	defer func() {
 		if retErr != nil {
 			w.CloseWithError(retErr)
@@ -247,15 +247,17 @@ func (o *OCI) write(repo *om.Repository, w *io.PipeWriter, layer *om.Layer) (ret
 		return err
 	}
 
-	err = tw.WriteHeader(&tar.Header{
-		Name:     path.Join(refsDir, layer.ID()),
-		Mode:     0600,
-		Typeflag: tar.TypeReg,
-		Size:     int64(len(content)),
-	})
+	for _, ref := range append([]string{layer.ID()}, tags...) {
+		err = tw.WriteHeader(&tar.Header{
+			Name:     path.Join(refsDir, ref),
+			Mode:     0600,
+			Typeflag: tar.TypeReg,
+			Size:     int64(len(content)),
+		})
 
-	if _, err := tw.Write(content); err != nil {
-		return err
+		if _, err := tw.Write(content); err != nil {
+			return err
+		}
 	}
 
 	return err

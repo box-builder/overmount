@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -47,9 +48,9 @@ func (d *dockerSuite) SetUpTest(c *C) {
 
 func (d *dockerSuite) TestDockerImportExport(c *C) {
 	images := map[string][]string{
-		"golang":          []string{"/bin/bash"}, // should have two images
-		"alpine:latest":   nil,                   // squashed image, single layer
-		"postgres:latest": []string{"postgres"},  // just a fatty
+		"golang:latest":   []string{"/bin/bash"},
+		"alpine:latest":   nil,                  // squashed image, single layer
+		"postgres:latest": []string{"postgres"}, // just a fatty
 	}
 
 	layerIDMap := map[string]struct{}{}
@@ -64,6 +65,7 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 	c.Assert(err, IsNil)
 
 	for imageName, cmd := range images {
+		taggedImage := strings.Split(imageName, ":")[0] + ":tagged"
 		reader, err := d.client.ImagePull(context.Background(), "docker.io/library/"+imageName, types.ImagePullOptions{})
 		c.Assert(err, IsNil, Commentf("%v", imageName))
 		_, err = io.Copy(ioutil.Discard, reader)
@@ -75,13 +77,15 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 		c.Assert(err, IsNil, Commentf("%v", imageName))
 		c.Assert(layers, NotNil, Commentf("%v", imageName))
 
-		for _, layer := range layers {
+		for i, layer := range layers {
+			numberedTaggedImage := fmt.Sprintf("%s-%d", taggedImage, i)
+
 			layerIDMap[layer.ID()] = struct{}{}
 			config, err := layer.Config()
 			c.Assert(err, IsNil, Commentf("%v", imageName))
 			c.Assert(config.Cmd, DeepEquals, cmd, Commentf("%v", imageName))
 
-			reader, err = d.repository.Export(docker, layer)
+			reader, err = d.repository.Export(docker, layer, []string{numberedTaggedImage})
 			c.Assert(err, IsNil, Commentf("%v", imageName))
 			resp, err := d.client.ImageLoad(context.Background(), reader, false)
 			c.Assert(err, IsNil, Commentf("%v", imageName))
@@ -94,27 +98,33 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 			br := bufio.NewReader(resp.Body)
 			for {
 				line, err = br.ReadString('\n')
+				if err != nil {
+					if err == io.EOF {
+						err = nil // forgive my cheesy error handling
+					}
+
+					break
+				}
+
 				line = strings.TrimSpace(line)
 				myMap := map[string]interface{}{}
 				c.Assert(json.Unmarshal([]byte(line), &myMap), IsNil)
 				stream, ok := myMap["stream"].(string)
-				if ok {
-					found = strings.HasPrefix(stream, "Loaded image ID")
-				}
-				if found || err != nil {
+				if ok && stream == fmt.Sprintf("Loaded image: %s\n", numberedTaggedImage) {
+					found = true
 					break
 				}
 			}
 
 			c.Assert(err, IsNil, Commentf("%v", imageName))
-			c.Assert(found, Equals, true)
+			c.Assert(found, Equals, true, Commentf("%v", imageName))
 		}
 	}
 
 	for tag := range tags {
 		layer, err := d.repository.GetTag(tag)
-		c.Assert(err, IsNil)
+		c.Assert(err, IsNil, Commentf("%v", tag))
 		_, ok := layerIDMap[layer.ID()]
-		c.Assert(ok, Equals, true)
+		c.Assert(ok, Equals, true, Commentf("%v", tag))
 	}
 }
