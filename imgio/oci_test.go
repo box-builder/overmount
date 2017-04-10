@@ -37,7 +37,7 @@ func (d *dockerSuite) TestOCIExport(c *C) {
 		c.Assert(layers, NotNil, Commentf("%v", imageName))
 
 		oci := NewOCI()
-		reader, err = d.repository.Export(oci, layers[0])
+		reader, err = d.repository.Export(oci, layers[0], []string{"oci"})
 		c.Assert(err, IsNil)
 		tf, err := ioutil.TempFile("", "overmount-test-")
 		defer os.Remove(tf.Name())
@@ -46,7 +46,7 @@ func (d *dockerSuite) TestOCIExport(c *C) {
 		c.Assert(err, IsNil)
 		tf.Close()
 
-		out, err := exec.Command("oci-image-tool", "validate", tf.Name()).CombinedOutput()
+		out, err := exec.Command("oci-image-tool", "validate", "--ref", "oci", tf.Name()).CombinedOutput()
 		c.Assert(err, IsNil)
 		c.Assert(strings.Contains(string(out), fmt.Sprintf("%s: OK", tf.Name())), Equals, true)
 		c.Assert(strings.Contains(string(out), "Validation succeeded"), Equals, true)
