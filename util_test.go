@@ -14,7 +14,7 @@ func (m *mountSuite) makeImage(c *C, layerCount int) (*Image, *Layer) {
 	var parent *Layer
 	for i := 0; i < layerCount; i++ {
 		var err error
-		parent, err = m.Repository.CreateLayer(fmt.Sprintf("test%d", i), parent)
+		parent, err = m.Repository.CreateLayer(fmt.Sprintf("test%d", i), parent, false)
 		c.Assert(err, IsNil)
 
 		r, w := io.Pipe()
@@ -41,6 +41,7 @@ func (m *mountSuite) makeImage(c *C, layerCount int) (*Image, *Layer) {
 			return nil
 		})
 
+		w.Close()
 		tw.Close()
 	}
 	return m.Repository.NewImage(parent), parent
