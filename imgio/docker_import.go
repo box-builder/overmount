@@ -73,8 +73,20 @@ func (d *Docker) constructImage(r *om.Repository, up *unpackedImage) ([]*om.Laye
 			return nil, errors.New("top layer doesn't appear to exist")
 		}
 
+		// force a write on the top layer.
 		if err := top.SaveConfig(configmap.FromDockerV1(&img.V1Image)); err != nil {
 			return nil, err
+		}
+
+		// cascade the config through the image until we find another config.
+		for iter := top.Parent; iter != nil; iter = iter.Parent {
+			if _, err := iter.Config(); err == nil {
+				break
+			}
+
+			if err := iter.SaveConfig(configmap.FromDockerV1(&img.V1Image)); err != nil {
+				return nil, err
+			}
 		}
 
 		tags, ok := up.tagMap[topLayer]
