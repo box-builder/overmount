@@ -53,6 +53,12 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 		"postgres:latest": []string{"postgres"}, // just a fatty
 	}
 
+	layerCounts := map[string]int{
+		"golang:latest":   7,
+		"alpine:latest":   1,
+		"postgres:latest": 13,
+	}
+
 	layerIDMap := map[string]struct{}{}
 
 	tags := map[string]struct{}{
@@ -76,6 +82,13 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 		layers, err := docker.Import(d.repository, reader)
 		c.Assert(err, IsNil, Commentf("%v", imageName))
 		c.Assert(layers, NotNil, Commentf("%v", imageName))
+
+		count := 0
+		for iter := layers[0]; iter != nil; iter = iter.Parent {
+			count++
+		}
+
+		c.Assert(layerCounts[imageName], Equals, count)
 
 		for i, layer := range layers {
 			numberedTaggedImage := fmt.Sprintf("%s-%d", taggedImage, i)

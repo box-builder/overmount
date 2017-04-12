@@ -12,10 +12,12 @@ import (
 )
 
 func (m *mountSuite) TestLayerProperties(c *C) {
-	layer, err := m.Repository.CreateLayer("test", nil)
+	layer, err := m.Repository.CreateLayer("test", nil, false)
 	c.Assert(err, IsNil)
-	_, err = m.Repository.CreateLayer("test", nil)
+	_, err = m.Repository.CreateLayer("test", nil, false)
 	c.Assert(err, Equals, ErrLayerExists)
+	layer, err = m.Repository.CreateLayer("test", nil, true)
+	c.Assert(err, IsNil)
 	c.Assert(path.Base(layer.MountPath()), Equals, "test")
 	c.Assert(path.Dir(layer.MountPath()), Equals, path.Join(m.Repository.baseDir, mountBase))
 	c.Assert(path.Base(path.Dir(layer.Path())), Equals, "test")
@@ -85,4 +87,20 @@ func (m *mountSuite) TestLayerConfig(c *C) {
 	config, err = layer.Config()
 	c.Assert(err, IsNil)
 	c.Assert(config.Cmd, DeepEquals, []string{"quux"})
+}
+
+func (m *mountSuite) TestCreateLayerFromAsset(c *C) {
+	_, layer := m.makeImage(c, 2)
+	f, err := m.Repository.TempFile()
+	c.Assert(err, IsNil)
+	digest, err := layer.Pack(f)
+	c.Assert(err, IsNil)
+	_, err = f.Seek(0, 0)
+	c.Assert(err, IsNil)
+	newLayer, err := m.Repository.CreateLayerFromAsset(f, layer.Parent, false)
+	c.Assert(err, IsNil)
+	c.Assert(newLayer.ID(), Equals, digest.Hex())
+	fi, err := os.Stat(newLayer.Path())
+	c.Assert(err, IsNil)
+	c.Assert(fi.IsDir(), Equals, !m.Repository.IsVirtual())
 }
