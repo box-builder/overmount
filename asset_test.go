@@ -92,6 +92,13 @@ func (m *mountSuite) TestAssetVirtual(c *C) {
 
 	asset, err := NewAsset(layerFile, digest.SHA256.Digester(), true)
 	c.Assert(err, IsNil)
+	c.Assert(os.Symlink("/etc/passwd", layerFile), IsNil)
+	_, err = asset.LoadDigest()
+	c.Assert(errors.Cause(err), Equals, ErrInvalidAsset)
+	c.Assert(os.Remove(layerFile), IsNil)
+
+	asset, err = NewAsset(layerFile, digest.SHA256.Digester(), true)
+	c.Assert(err, IsNil)
 	c.Assert(asset.Path(), Equals, layerFile)
 	c.Assert(asset.Digest(), Equals, emptyDigest)
 
