@@ -23,8 +23,10 @@ func (m *mountSuite) TestImageMountUnmount(c *C) {
 	c.Assert(image.Mount(), IsNil)
 	c.Assert(image.Unmount(), IsNil)
 
-	layer.id = ".."
+	layer.id = "../../../../"
 	c.Assert(errors.Cause(image.Mount()), Equals, ErrMountCannotProceed)
+	image2 = m.Repository.NewImage(layer) // only one layer
+	c.Assert(errors.Cause(image2.Mount()), Equals, ErrMountCannotProceed)
 }
 
 func (m *mountSuite) TestImageCommit(c *C) {
