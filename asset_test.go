@@ -26,6 +26,20 @@ func (m *mountSuite) TestAssetBasic(c *C) {
 	}
 
 	for dir, check := range dispatchTable {
+		if check == IsNil { // cheating a bit to ensure we're not removing overmount.go
+			c.Assert(os.Remove(dir), IsNil)
+			c.Assert(os.Symlink("/etc", dir), IsNil)
+			asset, _ := NewAsset(dir, digest.SHA256.Digester(), false)
+			_, err := asset.LoadDigest()
+			c.Assert(errors.Cause(err), Equals, ErrInvalidAsset)
+			c.Assert(os.Remove(dir), IsNil)
+			asset, err = NewAsset(dir, digest.SHA256.Digester(), false)
+			c.Assert(err, IsNil)
+			_, err = asset.LoadDigest()
+			c.Assert(errors.Cause(err), Equals, ErrInvalidAsset)
+			c.Assert(os.Mkdir(dir, 0700), IsNil)
+		}
+
 		asset, err := NewAsset(dir, digest.SHA256.Digester(), false)
 		c.Assert(err, IsNil)
 		c.Assert(asset.Path(), Equals, dir)

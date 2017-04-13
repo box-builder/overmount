@@ -68,6 +68,15 @@ func (a *Asset) LoadDigest() (digest.Digest, error) {
 
 		reader, err = os.Open(a.path)
 	} else {
+		_, err := os.Lstat(a.path)
+		if os.IsNotExist(err) {
+			return a.Digest(), errors.Wrap(ErrInvalidAsset, "layer directory does not exist")
+		}
+
+		if err := checkDir(a.path, ErrInvalidAsset); err != nil {
+			return a.Digest(), err
+		}
+
 		reader, err = archive.Tar(a.path, archive.Uncompressed)
 	}
 
