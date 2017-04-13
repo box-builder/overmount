@@ -1,4 +1,4 @@
-from "golang"
+from "golang:1.8.1"
 
 remotepath = "/go/src/github.com/box-builder/overmount"
 
