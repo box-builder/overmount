@@ -9,12 +9,12 @@ import (
 )
 
 func (m *mountSuite) TestImageMountUnmount(c *C) {
+	image, layer := m.makeImage(c, 2)
+
 	if m.Repository.IsVirtual() {
-		c.Skip("Cannot mount virtual layers")
+		c.Assert(errors.Cause(image.Mount()), Equals, ErrMountCannotProceed)
 		return
 	}
-
-	image, layer := m.makeImage(c, 2)
 
 	image2 := m.Repository.NewImage(layer.Parent) // only one layer
 	err := image2.Mount()
@@ -23,8 +23,10 @@ func (m *mountSuite) TestImageMountUnmount(c *C) {
 	c.Assert(image.Mount(), IsNil)
 	c.Assert(image.Unmount(), IsNil)
 
-	layer.id = ".."
+	layer.id = "../../../../"
 	c.Assert(errors.Cause(image.Mount()), Equals, ErrMountCannotProceed)
+	image2 = m.Repository.NewImage(layer) // only one layer
+	c.Assert(errors.Cause(image2.Mount()), Equals, ErrMountCannotProceed)
 }
 
 func (m *mountSuite) TestImageCommit(c *C) {
