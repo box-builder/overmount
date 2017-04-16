@@ -18,30 +18,41 @@ func (m *mountSuite) makeImage(c *C, layerCount int) (*Image, *Layer) {
 		c.Assert(err, IsNil)
 
 		r, w := io.Pipe()
-		go parent.Unpack(r)
+		go func() {
+			_, err := parent.Unpack(r)
+			c.Assert(err, IsNil)
+		}()
 
 		tw := tar.NewWriter(w)
 
 		wd, err := os.Getwd()
 		c.Assert(err, IsNil)
 
-		filepath.Walk(wd, func(p string, fi os.FileInfo, err error) error {
-			header, err := tar.FileInfoHeader(fi, fi.Name())
+		err = filepath.Walk(wd, func(p string, fi os.FileInfo, err error) error {
 			c.Assert(err, IsNil)
+
+			rel, err := filepath.Rel(wd, p)
+			c.Assert(err, IsNil)
+			header, err := tar.FileInfoHeader(fi, "")
+			c.Assert(err, IsNil)
+			header.Name = rel
 			c.Assert(tw.WriteHeader(header), IsNil)
 
 			if !fi.IsDir() {
-				f, err := os.Open(p)
+				abs, err := filepath.Abs(p)
+				c.Assert(err, IsNil)
+				f, err := os.Open(abs)
 				c.Assert(err, IsNil)
 				_, err = io.Copy(tw, f)
 				c.Assert(err, IsNil)
 				return f.Close()
 			}
 
-			return nil
+			_, err = tw.Write(nil)
+			return err
 		})
 
-		w.Close()
+		w.CloseWithError(err)
 		tw.Close()
 	}
 	return m.Repository.NewImage(parent), parent
