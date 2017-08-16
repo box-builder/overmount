@@ -48,9 +48,9 @@ func (d *dockerSuite) SetUpTest(c *C) {
 
 func (d *dockerSuite) TestDockerImportExport(c *C) {
 	images := map[string][]string{
-		"golang:latest":   []string{"/bin/bash"},
-		"alpine:latest":   nil,                  // squashed image, single layer
-		"postgres:latest": []string{"postgres"}, // just a fatty
+		"golang:latest":   {"bash"},
+		"alpine:latest":   {"/bin/sh"},  // squashed image, single layer
+		"postgres:latest": {"postgres"}, // just a fatty
 	}
 
 	layerCounts := map[string]int{
@@ -62,9 +62,9 @@ func (d *dockerSuite) TestDockerImportExport(c *C) {
 	layerIDMap := map[string]struct{}{}
 
 	tags := map[string]struct{}{
-		"golang:latest":   struct{}{},
-		"alpine:latest":   struct{}{},
-		"postgres:latest": struct{}{},
+		"golang:latest":   {},
+		"alpine:latest":   {},
+		"postgres:latest": {},
 	}
 
 	docker, err := NewDocker(d.client)
